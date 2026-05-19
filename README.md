@@ -21,14 +21,16 @@
 ядра Windows, защиту от DNS/WebRTC/IPv6 утечек и authentication через
 Telegram, email или ссылку подписки.
 
-> Этот проект — **форк замечательного клиента
+> Этот проект — **божественный форк замечательного клиента
 > [Nemefisto](https://github.com/kanabicks/NemefistoAPP)** от
 > [kanabicks](https://github.com/kanabicks). Архитектура (Tauri 2 +
-> sing-box/Mihomo + helper-сервис под SYSTEM) — его заслуга, низкий
-> поклон. Мы добавили интеграцию с собственной auth-инфраструктурой
-> Ariy (Telegram deep-link, email/password, sub-URL) и переделали UI
-> под наш бренд. Оригинальный Nemefisto — отличная универсальная
-> платформа, и его исходники остаются доступны по ссылке выше.
+> sing-box/Mihomo + helper-сервис под SYSTEM, kill-switch на WFP,
+> server-driven UX через HTTP-заголовки подписки) — его заслуга,
+> низкий поклон. Мы взяли это благословение, интегрировали с
+> auth-инфраструктурой Ariy (Telegram deep-link, email/password,
+> sub-URL) и переделали UI под свой бренд. Оригинальный Nemefisto —
+> отличная универсальная платформа, и его исходники остаются доступны
+> по ссылке выше.
 
 ---
 
