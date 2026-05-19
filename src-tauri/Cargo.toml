@@ -1,6 +1,6 @@
-[package]
+﻿[package]
 name = "vpn-client"
-version = "0.1.0"
+version = "0.2.0-beta.1"
 description = "Ariy VPN desktop client"
 authors = ["Ariy VPN"]
 edition = "2021"
@@ -23,25 +23,25 @@ tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-opener = "2"
 tauri-plugin-deep-link = "2"
 tauri-plugin-global-shortcut = "2"
-# 0.1.1 / Bug 5: single-instance защита. При попытке запуска второй
-# копии — main экземпляр получает callback, фокусирует своё окно,
-# второй процесс молча выходит. Без этого пользователь мог открывать
-# приложение пачкой раз — каждый раз новая инстанция, конкуренция
-# за helper-pipe и WFP-фильтры.
+# 0.1.1 / Bug 5: single-instance Р·Р°С‰РёС‚Р°. РџСЂРё РїРѕРїС‹С‚РєРµ Р·Р°РїСѓСЃРєР° РІС‚РѕСЂРѕР№
+# РєРѕРїРёРё вЂ” main СЌРєР·РµРјРїР»СЏСЂ РїРѕР»СѓС‡Р°РµС‚ callback, С„РѕРєСѓСЃРёСЂСѓРµС‚ СЃРІРѕС‘ РѕРєРЅРѕ,
+# РІС‚РѕСЂРѕР№ РїСЂРѕС†РµСЃСЃ РјРѕР»С‡Р° РІС‹С…РѕРґРёС‚. Р‘РµР· СЌС‚РѕРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РјРѕРі РѕС‚РєСЂС‹РІР°С‚СЊ
+# РїСЂРёР»РѕР¶РµРЅРёРµ РїР°С‡РєРѕР№ СЂР°Р· вЂ” РєР°Р¶РґС‹Р№ СЂР°Р· РЅРѕРІР°СЏ РёРЅСЃС‚Р°РЅС†РёСЏ, РєРѕРЅРєСѓСЂРµРЅС†РёСЏ
+# Р·Р° helper-pipe Рё WFP-С„РёР»СЊС‚СЂС‹.
 tauri-plugin-single-instance = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-shell = "2.3.5"
-# 14.A: auto-updater. Поддерживает signed updates через ed25519
-# (наш Tauri signing key, не Microsoft Authenticode). Endpoint —
-# GitHub Releases с latest.json который генерится в CI workflow.
+# 14.A: auto-updater. РџРѕРґРґРµСЂР¶РёРІР°РµС‚ signed updates С‡РµСЂРµР· ed25519
+# (РЅР°С€ Tauri signing key, РЅРµ Microsoft Authenticode). Endpoint вЂ”
+# GitHub Releases СЃ latest.json РєРѕС‚РѕСЂС‹Р№ РіРµРЅРµСЂРёС‚СЃСЏ РІ CI workflow.
 tauri-plugin-updater = "2"
-# 14.A: process plugin для `relaunch()` после download+install update'а.
-# Без него фронт не может перезапустить app после tauri-plugin-updater'а.
+# 14.A: process plugin РґР»СЏ `relaunch()` РїРѕСЃР»Рµ download+install update'Р°.
+# Р‘РµР· РЅРµРіРѕ С„СЂРѕРЅС‚ РЅРµ РјРѕР¶РµС‚ РїРµСЂРµР·Р°РїСѓСЃС‚РёС‚СЊ app РїРѕСЃР»Рµ tauri-plugin-updater'Р°.
 tauri-plugin-process = "2"
-# Native Windows toasts (через WinRT ToastNotifier API). Показываются в
-# Action Center когда окно свёрнуто/в трее. При видимом окне используем
-# in-app Toaster — нативные нужны именно когда юзер не смотрит на app.
+# Native Windows toasts (С‡РµСЂРµР· WinRT ToastNotifier API). РџРѕРєР°Р·С‹РІР°СЋС‚СЃСЏ РІ
+# Action Center РєРѕРіРґР° РѕРєРЅРѕ СЃРІС‘СЂРЅСѓС‚Рѕ/РІ С‚СЂРµРµ. РџСЂРё РІРёРґРёРјРѕРј РѕРєРЅРµ РёСЃРїРѕР»СЊР·СѓРµРј
+# in-app Toaster вЂ” РЅР°С‚РёРІРЅС‹Рµ РЅСѓР¶РЅС‹ РёРјРµРЅРЅРѕ РєРѕРіРґР° СЋР·РµСЂ РЅРµ СЃРјРѕС‚СЂРёС‚ РЅР° app.
 tauri-plugin-notification = "2"
 serde_yaml = "0.9.34"
 base64 = "0.22.1"
@@ -50,23 +50,23 @@ anyhow = "1.0.102"
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "charset", "socks", "json"] }
 tokio = { version = "1", features = ["net", "time", "rt", "io-util", "macros", "sync", "process"] }
 futures = "0.3"
-# 14.F: zip-архив для export_diagnostics (диагностический пакет для саппорта).
-# Без compression-features чтобы не тянуть лишние зависимости — в zip кладём
-# уже мелкие текстовые файлы (логи + JSON), сжатие deflate не критично.
+# 14.F: zip-Р°СЂС…РёРІ РґР»СЏ export_diagnostics (РґРёР°РіРЅРѕСЃС‚РёС‡РµСЃРєРёР№ РїР°РєРµС‚ РґР»СЏ СЃР°РїРїРѕСЂС‚Р°).
+# Р‘РµР· compression-features С‡С‚РѕР±С‹ РЅРµ С‚СЏРЅСѓС‚СЊ Р»РёС€РЅРёРµ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё вЂ” РІ zip РєР»Р°РґС‘Рј
+# СѓР¶Рµ РјРµР»РєРёРµ С‚РµРєСЃС‚РѕРІС‹Рµ С„Р°Р№Р»С‹ (Р»РѕРіРё + JSON), СЃР¶Р°С‚РёРµ deflate РЅРµ РєСЂРёС‚РёС‡РЅРѕ.
 zip = { version = "2.2", default-features = false, features = ["deflate"] }
-# 11.B: sha256 для verify-after-download geofiles. Только integrity-check,
-# не security-critical — но через крейт компактнее чем велосипед.
+# 11.B: sha256 РґР»СЏ verify-after-download geofiles. РўРѕР»СЊРєРѕ integrity-check,
+# РЅРµ security-critical вЂ” РЅРѕ С‡РµСЂРµР· РєСЂРµР№С‚ РєРѕРјРїР°РєС‚РЅРµРµ С‡РµРј РІРµР»РѕСЃРёРїРµРґ.
 sha2 = "0.10"
-# 8.F: percent-encoding для путей в URL mihomo external-controller API.
-# Имена групп могут содержать UTF-8 / emoji («🇪🇺 Fastest»), без encoding
-# reqwest падает с invalid URI.
+# 8.F: percent-encoding РґР»СЏ РїСѓС‚РµР№ РІ URL mihomo external-controller API.
+# РРјРµРЅР° РіСЂСѓРїРї РјРѕРіСѓС‚ СЃРѕРґРµСЂР¶Р°С‚СЊ UTF-8 / emoji (В«рџ‡Єрџ‡є FastestВ»), Р±РµР· encoding
+# reqwest РїР°РґР°РµС‚ СЃ invalid URI.
 urlencoding = "2"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.52"
 windows-service = "0.7"
-# Защищённое хранилище для секретов (URL подписки, HWID-override).
-# Использует Windows Credential Manager через keyring-rs (этап 6.A).
+# Р—Р°С‰РёС‰С‘РЅРЅРѕРµ С…СЂР°РЅРёР»РёС‰Рµ РґР»СЏ СЃРµРєСЂРµС‚РѕРІ (URL РїРѕРґРїРёСЃРєРё, HWID-override).
+# РСЃРїРѕР»СЊР·СѓРµС‚ Windows Credential Manager С‡РµСЂРµР· keyring-rs (СЌС‚Р°Рї 6.A).
 keyring = "3"
 windows-sys = { version = "0.59", features = [
     "Win32_Foundation",
@@ -74,13 +74,13 @@ windows-sys = { version = "0.59", features = [
     "Win32_NetworkManagement_IpHelper",
     "Win32_NetworkManagement_Ndis",
     # 13.D: WFP API (FwpmEngineOpen0, FwpmFilterAdd0, FWPM_LAYER_*).
-    # Используется только в helper'е — но features в windows-sys
-    # глобальные на крейт, поэтому объявляем здесь.
+    # РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ С‚РѕР»СЊРєРѕ РІ helper'Рµ вЂ” РЅРѕ features РІ windows-sys
+    # РіР»РѕР±Р°Р»СЊРЅС‹Рµ РЅР° РєСЂРµР№С‚, РїРѕСЌС‚РѕРјСѓ РѕР±СЉСЏРІР»СЏРµРј Р·РґРµСЃСЊ.
     "Win32_NetworkManagement_WindowsFilteringPlatform",
     "Win32_Networking_WinSock",
     "Win32_System_Console",
-    # 9.B: EnumProcesses + K32GetModuleBaseNameW для детекта запущенных
-    # сторонних VPN-клиентов (без admin, PROCESS_QUERY_LIMITED_INFORMATION).
+    # 9.B: EnumProcesses + K32GetModuleBaseNameW РґР»СЏ РґРµС‚РµРєС‚Р° Р·Р°РїСѓС‰РµРЅРЅС‹С…
+    # СЃС‚РѕСЂРѕРЅРЅРёС… VPN-РєР»РёРµРЅС‚РѕРІ (Р±РµР· admin, PROCESS_QUERY_LIMITED_INFORMATION).
     "Win32_System_ProcessStatus",
     "Win32_System_Threading",
     "Win32_System_Rpc",
@@ -88,17 +88,17 @@ windows-sys = { version = "0.59", features = [
     "Win32_UI_WindowsAndMessaging",
 ] }
 
-# Helper-сервис как отдельный исполняемый файл. Запускается с правами SYSTEM
-# через Windows Service Control Manager и слушает named pipe для команд от
-# user-mode Tauri-приложения (управление TUN-интерфейсом и routing).
+# Helper-СЃРµСЂРІРёСЃ РєР°Рє РѕС‚РґРµР»СЊРЅС‹Р№ РёСЃРїРѕР»РЅСЏРµРјС‹Р№ С„Р°Р№Р». Р—Р°РїСѓСЃРєР°РµС‚СЃСЏ СЃ РїСЂР°РІР°РјРё SYSTEM
+# С‡РµСЂРµР· Windows Service Control Manager Рё СЃР»СѓС€Р°РµС‚ named pipe РґР»СЏ РєРѕРјР°РЅРґ РѕС‚
+# user-mode Tauri-РїСЂРёР»РѕР¶РµРЅРёСЏ (СѓРїСЂР°РІР»РµРЅРёРµ TUN-РёРЅС‚РµСЂС„РµР№СЃРѕРј Рё routing).
 [[bin]]
 name = "ariy-helper"
 path = "src/bin/ariy_helper.rs"
 
-# 14.C: line-tables только в release-сборке. Backtrace в crash-dump'ах
-# содержит читаемые file:line, а размер бинарника растёт минимально
-# (~1-3 МБ против 30 МБ для полных debug-symbols). Compromise: достаточно
-# для прод-диагностики, не раздувает installer.
+# 14.C: line-tables С‚РѕР»СЊРєРѕ РІ release-СЃР±РѕСЂРєРµ. Backtrace РІ crash-dump'Р°С…
+# СЃРѕРґРµСЂР¶РёС‚ С‡РёС‚Р°РµРјС‹Рµ file:line, Р° СЂР°Р·РјРµСЂ Р±РёРЅР°СЂРЅРёРєР° СЂР°СЃС‚С‘С‚ РјРёРЅРёРјР°Р»СЊРЅРѕ
+# (~1-3 РњР‘ РїСЂРѕС‚РёРІ 30 РњР‘ РґР»СЏ РїРѕР»РЅС‹С… debug-symbols). Compromise: РґРѕСЃС‚Р°С‚РѕС‡РЅРѕ
+# РґР»СЏ РїСЂРѕРґ-РґРёР°РіРЅРѕСЃС‚РёРєРё, РЅРµ СЂР°Р·РґСѓРІР°РµС‚ installer.
 [profile.release]
 debug = "line-tables-only"
 

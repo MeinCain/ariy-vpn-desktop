@@ -3528,3 +3528,23 @@ input, textarea { font: inherit; cursor: text; }
   .power-label { font-size: 17px; }
   .footer { display: none; }
 }
+
+/* ── Ariy login form (Welcome.tsx email mode) ─────────────────────── */
+.welcome-login-form .input { width: 100%; }
+.link-btn {
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: -0.01em;
+  text-transform: lowercase;
+  color: var(--fg-mute);
+  cursor: none;
+  text-align: left;
+  transition: color 0.15s;
+}
+.link-btn:hover { color: var(--fg); text-decoration: underline; }
+.link-btn:focus-visible { outline: 1px dashed var(--fg-mute); outline-offset: 2px; }

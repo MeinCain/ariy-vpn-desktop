@@ -43,13 +43,27 @@
   },
   "welcome": {
     "tag": "connect in a minute",
-    "title": "add a subscription",
+    "title": "sign in to ariy vpn",
     "desc": {
       "before": "paste your subscription URL (looks like",
       "after": "), the app will fetch the server list and ping each one."
     },
     "load": "load",
-    "dropHint": "or just drop a link from your browser here"
+    "dropHint": "or just drop a link from your browser here",
+    "login": {
+      "intro": "sign in with email and password — the app will fetch your subscription automatically.",
+      "emailPlaceholder": "email",
+      "passwordPlaceholder": "password",
+      "submit": "sign in",
+      "register": "no account? sign up in the cabinet",
+      "useSubUrl": "i have a direct subscription URL",
+      "backToEmail": "← back to email sign-in",
+      "err": {
+        "invalidCredentials": "invalid email or password",
+        "rateLimited": "too many attempts, please wait a minute",
+        "badInput": "please check the email and password"
+      }
+    }
   },
   "power": {
     "connect": "connect",
