@@ -1,13 +1,9 @@
-# nemefisto
+# Ariy VPN — Desktop
 
-> приватный VPN-клиент под Windows на двух ядрах (sing-box и Mihomo)
-> с защитой от DPI, утечек и локального детекта.
-> ноль телеметрии · открытый код · auto-update · одна кнопка.
-
-«VPN одной кнопкой»: подключение за ~1.5 секунды, минимум вопросов
-к пользователю, максимум совместимости с современными протоколами
-обхода блокировок. Архитектура изначально готова к портированию на
-macOS, iOS и Android — UI отделён от системного слоя.
+> **Be fast. Be stealthy. Be free.**
+>
+> Десктопный VPN-клиент для Windows на базе sing-box и Mihomo.
+> Подключение в один клик, защита от DPI, утечек и локального детекта.
 
 [![release](https://img.shields.io/github/v/release/MeinCain/ariy-vpn-desktop?include_prereleases&label=release)](https://github.com/MeinCain/ariy-vpn-desktop/releases)
 [![tauri](https://img.shields.io/badge/tauri-2-blue)](https://v2.tauri.app/)
@@ -17,108 +13,116 @@ macOS, iOS и Android — UI отделён от системного слоя.
 
 ---
 
+## Что это
+
+**Ariy VPN Desktop** — нативный Windows-клиент для VPN-подписок Ariy.
+Работает напрямую с VLESS+Reality (без HTTPS-прокси-обёртки, которая
+нужна нашему Chrome-расширению), поддерживает kill-switch на уровне
+ядра Windows, защиту от DNS/WebRTC/IPv6 утечек и authentication через
+Telegram, email или ссылку подписки.
+
+> Этот проект — **форк замечательного клиента
+> [Nemefisto](https://github.com/kanabicks/NemefistoAPP)** от
+> [kanabicks](https://github.com/kanabicks). Архитектура (Tauri 2 +
+> sing-box/Mihomo + helper-сервис под SYSTEM) — его заслуга, низкий
+> поклон. Мы добавили интеграцию с собственной auth-инфраструктурой
+> Ariy (Telegram deep-link, email/password, sub-URL) и переделали UI
+> под наш бренд. Оригинальный Nemefisto — отличная универсальная
+> платформа, и его исходники остаются доступны по ссылке выше.
+
+---
+
 ## Скачать
 
-Свежий релиз — на странице [Releases](https://github.com/MeinCain/ariy-vpn-desktop/releases).
+Свежий релиз — на странице
+[Releases](https://github.com/MeinCain/ariy-vpn-desktop/releases).
 Скачай `Ariy VPN_<version>_x64-setup.exe`, запусти, дальше installer
 сделает всё сам.
 
-> **SmartScreen ругается «Unknown publisher»** — это нормально, мы пока
-> без EV code-signing сертификата ($80–500/год). Жми «More info» → «Run
-> anyway». Установленный клиент сам обновляется на следующие версии.
+> **SmartScreen ругается «Unknown publisher»** — это нормально, мы
+> пока без EV code-signing сертификата. Жми «More info» → «Run
+> anyway». Установленный клиент сам обновляется на следующие версии
+> через Tauri auto-updater (ed25519-подпись, защита от MITM).
 
-После первой установки **обновления приходят автоматически**:
-проверка раз в 6 часов, при найденной новой версии — модалка
-«доступна v X.Y.Z [release notes →]». Подписи NSIS проверяются через
-Tauri ed25519 (защита от MITM подмены installer'а).
+После первой установки **обновления приходят автоматически**: проверка
+раз в 6 часов, при найденной новой версии — модалка
+«доступна v X.Y.Z [release notes →]».
 
 ---
 
 ## Что умеет
 
 ### VPN-движки
+
 **Можно переключаться без переустановки**, выбор в Settings → движок:
 
 - **sing-box 1.13** (default) — быстрый старт (~1.4с), built-in TUN
   через WinTUN с auto-route, нативный anti-DPI (`tls.fragment` +
   DoH-bootstrap server-resolve). Поддерживает: vless+REALITY/Vision,
-  vmess, trojan, ss, hysteria2, **TUIC**, wireguard.
-- **Mihomo (Clash Meta) 1.19** — нужен для **AnyTLS**, **Mieru**,
-  **XHTTP** transport, и **per-process routing** через нативный
-  `PROCESS-NAME` matcher.
+  vmess, trojan, ss, hysteria2, TUIC, wireguard.
+- **Mihomo (Clash Meta) 1.19** — нужен для AnyTLS, Mieru, XHTTP
+  transport, и per-process routing через нативный `PROCESS-NAME` matcher.
 
-### Поддержка панелей подписки
-| Панель | Что отдаёт | Как обрабатываем |
-|---|---|---|
-| **Marzban / 3x-ui / x-ui** | xray-JSON конфиг | конвертируем в sing-box JSON через `convert_xray_json_to_singbox`, сохраняя routing/balancers |
-| **Remnawave** | sing-box JSON напрямую | passthrough через `patch_singbox_json` — добавляем только наши mixed-inbound и SOCKS-auth |
-| любая | base64 / raw список протокольных URI (vless://, vmess://, и т.п.) | universal subscription parser в `config/subscription.rs` |
-| любая | полный mihomo YAML с proxy-groups | passthrough через `patch_full_yaml` |
+### Авторизация (фишка Ariy)
 
-Server-driven UX: подписка может прислать заголовки `X-Ariy VPN-*`
-(тема / фон / движок / маршрутизация / объявления) — клиент
-автоматически применит дефолты, юзер всегда может переопределить.
+Три способа войти, как и в нашем Chrome-расширении:
+
+1. **Telegram deep-link** — кнопка «Войти через Telegram», открывается
+   `t.me/AriyVPN_Bot`, юзер подтверждает в боте, клиент получает
+   `session_token` (TTL 30 дней, sliding).
+2. **Email / password** — для тех у кого нет Telegram, или для CI.
+3. **Sub-URL** — legacy, если у тебя есть прямая подписка.
+
+После логина клиент автоматически получает текущий список нод и
+обновляет его раз в день. Все эндпоинты на `api.example.com`.
 
 ### Режимы подключения
+
 - **Системный прокси** — быстрый старт, один SOCKS5/HTTP inbound
-  на loopback с **рандомизированным портом** в `[30000, 60000)` (защита
-  от локального детекта VPN сторонними процессами).
+  на loopback с **рандомизированным портом** в `[30000, 60000)`
+  (защита от локального детекта VPN сторонними процессами).
 - **TUN** — весь системный трафик через WinTUN-адаптер. Built-in TUN
-  у обоих движков (нет сторонних tun2socks/tun2proxy).
+  у обоих движков (нет сторонних tun2socks).
 - **LAN** — inbound доступен другим устройствам в Wi-Fi сети
-  (с автогенерируемым SOCKS5 user/pass — креды показываются для
-  копирования).
+  (с автогенерируемым SOCKS5 user/pass).
 
 ### Защита и приватность
+
 - **Kill-switch** через Windows Filtering Platform (WFP) — фильтры
-  на уровне ядра. **DYNAMIC session**: если процесс упал, фильтры
-  снимаются автоматически (юзер не остаётся без интернета).
-  + 5-уровневый watchdog от orphan-фильтров.
-- **DNS leak protection** — блок весь :53/UDP+TCP кроме VPN-DNS.
+  на уровне ядра. DYNAMIC session: если процесс упал, фильтры
+  снимаются автоматически.
+- **DNS leak protection** — блок всего `:53/UDP+TCP` кроме VPN-DNS.
 - **WebRTC / DNS / IPv6 leak-test** через Cloudflare cdn-trace +
   ipwho.is + DoH whoami — авто после connect или вручную.
-- **Orphan cleanup** на старте — TUN-адаптеры и half-routes от
-  упавших сессий чистятся helper'ом.
 - **Маскировка имени TUN** — `wlan99` / `Local Area Connection N` /
-  `Ethernet N` вместо `nemefisto-<pid>` (защита от детекта VPN
-  по `GetAdaptersAddresses`).
-- **SOCKS5 inbound auth** для TUN/LAN-режимов (защита от чужих
-  процессов которые могут пользоваться нашим SOCKS-портом).
-- **Auto-update подписан** ed25519 (Tauri signing) — обновление
-  не подменишь man-in-the-middle.
+  `Ethernet N` (защита от детекта VPN по `GetAdaptersAddresses`).
+- **SOCKS5 inbound auth** для TUN/LAN-режимов.
+- **Auto-update подписан** ed25519 (Tauri signing).
+- **Ноль телеметрии** — никаких аналитических метрик, никаких
+  crash-репортов «домой». Логи остаются на твоей машине.
 
 ### Anti-DPI
+
 - TCP-фрагментация TLS ClientHello (`tls.fragment`)
 - UDP шумовые пакеты
 - Server-address-resolve через DoH (минуя системный DNS)
 - Hysteria2 obfs salamander
-- Все опции переключаются в Settings или приходят из заголовков подписки
 
 ### UI / UX
+
 - 🌐 **Двуязычный интерфейс** (RU / EN) с авто-детектом по
-  `navigator.language` или вручную в Settings → Интерфейс → язык.
+  `navigator.language` или вручную в Settings.
 - 🎨 **5 тем** (dark / light / midnight / sunset / sand) + **5
-  пресетов** (fluent / cupertino / vice / arcade / glacier). Тема
-  «как в системе» автоматически меняется на dark/light по
-  `prefers-color-scheme`.
+  пресетов** (fluent / cupertino / vice / arcade / glacier).
 - 🖼 **3D-фон** (4 сцены: crystal / tunnel / globe / particles).
-- 🎯 **Drag-and-drop URL подписки** в окно — бросаешь ссылку из
-  браузера, добавляется и сразу подгружается.
-- ⌨ **Глобальные горячие клавиши** (`Ctrl+Shift+V` toggle, и др.).
+- 🎯 **Drag-and-drop URL подписки** в окно.
+- ⌨ **Глобальные горячие клавиши** (`Ctrl+Shift+V` toggle).
 - 🪟 **Floating window** — мини-окошко поверх всего со status-dot
   и live-скоростью ↑/↓.
 - 🔌 **System tray** с быстрым connect/disconnect.
 - 📡 **Bandwidth-метр** в реальном времени.
 - 🛜 **SSID auto-mode** — VPN автоматически отключается в доверенных
   Wi-Fi (домашний роутер) и включается в чужих.
-- 📥 **Backup настроек** через JSON-файл или deep-link.
-- 🔧 **Routing-профили** geosite/geoip с авто-обновлением и
-  поддержкой авто-минимальных RU-правил.
-- ⚙ **Per-process routing** (Mihomo): «telegram через VPN, vk напрямую».
-- 📦 **NSIS auto-update** — приложение обновляется само в фоне
-  passive-режимом с подписанной ed25519-подписью.
-- 🐛 **Кнопка «сообщить о проблеме»** в Settings → about — открывает
-  GitHub Issues с pre-filled окружением.
 
 ---
 
@@ -137,7 +141,7 @@ Server-driven UX: подписка может прислать заголовк�
 ```powershell
 # Требуется Node.js 22+ и Rust stable.
 git clone https://github.com/MeinCain/ariy-vpn-desktop.git
-cd Ariy VPNAPP
+cd ariy-vpn-desktop
 npm ci
 npm run tauri:bundle
 # Готовый installer: src-tauri/target/release/bundle/nsis/
@@ -163,94 +167,80 @@ Helper-binary собирается автоматически через
 │   ├── stores/            # Zustand: vpn / subscription / settings / toast / update
 │   ├── lib/               # Утилиты, deep-links, leak-test, updater
 │   ├── locales/{ru,en}/   # i18n переводы (react-i18next)
-│   └── i18n.ts            # i18n config
+│   └── i18n.ts
 ├── src-tauri/             # Rust 2021
 │   ├── src/
 │   │   ├── vpn/           # State machine, sing-box, mihomo, leak-test
-│   │   ├── config/        # Парсинг подписок, sing-box-конфиги, geofiles, routing
-│   │   ├── platform/      # Windows-специфичный код (изолирован для портирования)
+│   │   ├── config/        # Парсинг подписок, sing-box-конфиги, geofiles
+│   │   ├── platform/      # Windows-специфичный код
 │   │   ├── ipc/           # Tauri commands
-│   │   └── bin/nemefisto_helper/  # SYSTEM-service: WFP / TUN / mihomo / sing-box
+│   │   └── bin/ariy_helper/  # SYSTEM-service: WFP / TUN / mihomo / sing-box
 │   └── binaries/          # sing-box.exe, mihomo.exe, wintun.dll, geo*.dat
-├── docs/RELEASE.md        # Инструкция по выпуску релиза через CI
 └── .github/workflows/     # Auto-build NSIS на push tag v*.*.*
 ```
 
 **State machine коннекта**: Idle → Warming → Ready → Connecting →
 Connected → Ready (после disconnect никогда не возвращаемся в Idle).
 
-**Helper-сервис** (`nemefisto-helper.exe`) запускается с правами
+**Helper-сервис** (`ariy-helper.exe`) запускается с правами
 SYSTEM через Windows Service Control Manager и общается с user-mode
-приложением через named pipe `\\.\pipe\nemefisto-helper`. Управляет
-WFP-фильтрами kill-switch, спавнит sing-box/mihomo для built-in TUN
-(нужен админ для CreateAdapter WinTUN), чистит orphan-ресурсы.
+приложением через named pipe `\\.\pipe\ariy-helper`. Управляет
+WFP-фильтрами kill-switch, спавнит sing-box/mihomo для built-in TUN,
+чистит orphan-ресурсы.
+
+**Deep-link scheme**: `ariy://` — клиент реагирует на ссылки от
+бота, открывающие подключение / добавление подписки / переключение
+тоннеля. Полный список схем — в `Settings → URL-схемы`.
 
 ---
 
 ## Релизный workflow
 
-С версии **0.1.3** релизы выпускаются через GitHub Actions.
-Подробности — [`docs/RELEASE.md`](docs/RELEASE.md).
+Релизы выпускаются автоматически через GitHub Actions при push'е тега
+`v*.*.*` в `main`. Релизные заметки на русском пишет автор PR'а —
+без шаблонов, своими словами что сделано / что не вошло.
 
 ```powershell
-# Bump версии в трёх файлах: package.json, Cargo.toml, tauri.conf.json
+# Bump версии в трёх файлах синхронно: package.json, Cargo.toml, tauri.conf.json
 git tag v0.X.Y -m "v0.X.Y — описание"
 git push origin main --follow-tags
-# CI собирает, подписывает, публикует на GitHub Releases.
-# Юзеры с 0.1.3+ получают auto-update в течение 6 часов.
+# CI собирает, подписывает signing-key'ём из secrets, публикует.
+# Юзеры получают auto-update в течение 6 часов.
 ```
-
-CHANGELOG в release-нотах генерируется автоматически из git log от
-предыдущего тега.
 
 ---
 
 ## Roadmap
 
 ### Сделано
-- ✅ sing-box миграция (0.1.2)
-- ✅ Production-ready kill-switch (WFP) для обоих движков (0.1.3)
-- ✅ Auto-updater + GitHub Actions CI/CD (0.1.3, fix в 0.2.2)
-- ✅ i18n RU+EN (0.2.0)
-- ✅ Drag-and-drop URL, system theme, feedback button (0.2.1)
-- ✅ CHANGELOG автогенерация в release-notes (0.2.1)
+- ✅ Полный ребрендинг от Nemefisto → Ariy VPN
+- ✅ Свой minisign signing-keypair для auto-updater
+- ✅ Свой deep-link scheme `ariy://`
+- ✅ Иконки Ariy (синяя «A» с орбитой) на все Tauri-форматы
+
+### В работе
+- ⏳ Интеграция с auth-api Ariy (Telegram deep-link, email, sub_url)
+- ⏳ Тестовая сборка + smoke-test
 
 ### Запланировано
-- [ ] Merge multiple subscriptions (UI-кнопка `+` + group-by-source drawer)
-- [ ] EV code signing — убирает SmartScreen warning ($)
-- [ ] Beta channel
-- [ ] WFP per-app routing (kernel-driver, для обоих движков)
-- [ ] macOS / Linux / Android / iOS порты
-
-### Закрыто (не делаем)
-- Smart auto-failover (задача провайдера через mihomo `urltest`)
-- Локальная история сессий
-- Speed-test (юзеры положат канал провайдеров)
-- Windows Hello при запуске
-
----
-
-## Приватность
-
-Ariy VPN **не собирает телеметрию**, **не отправляет crash-репорты
-«домой»**, и **не имеет remote-control механизмов**. Все логи
-локально на компьютере пользователя:
-- `%TEMP%\Ariy VPNVPN\sing-box-stderr.log` / `mihomo-stderr.log`
-- `C:\ProgramData\Ariy VPNVPN\helper.log` (kill-switch decisions)
-- `C:\ProgramData\Ariy VPNVPN\sing-box.log` / `mihomo.log` (built-in TUN)
-
-Deep-links и заголовки подписки имеют **строгий whitelist** — не могут
-запускать процессы, читать файлы вне стандартных путей, отключать
-Settings, или скрывать серверы. Подробности в [PRIVACY.md](PRIVACY.md).
+- 📌 Полная локализация под бренд (часть UI-текстов наследует upstream)
+- 📌 Beta-канал релизов
+- 📌 EV code signing — убирает SmartScreen warning
+- 📌 macOS / Linux порты
 
 ---
 
 ## Лицензия
 
-[MIT](LICENSE) — делайте что хотите, включая форк и дистрибуцию.
+[MIT](LICENSE) — оригинальная лицензия от Nemefisto сохранена.
+Делайте что хотите, включая форк и дистрибуцию.
 
 ## Благодарности
 
+- **[kanabicks/NemefistoAPP](https://github.com/kanabicks/NemefistoAPP)** —
+  upstream-проект, на котором всё стоит. Архитектура, kill-switch
+  на WFP, sing-box+Mihomo two-engine pattern, server-driven UX через
+  HTTP-заголовки подписки — всё его. Низкий поклон автору.
 - [SagerNet/sing-box](https://github.com/SagerNet/sing-box) — основной VPN-движок
 - [MetaCubeX/mihomo](https://github.com/MetaCubeX/mihomo) — второй движок (AnyTLS, Mieru)
 - [WireGuard wintun](https://www.wintun.net/) — driver для TUN-адаптера
