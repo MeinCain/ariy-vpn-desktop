@@ -1,4 +1,4 @@
-﻿{
+{
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Ariy VPN",
   "version": "0.2.0-beta.1",
@@ -47,8 +47,8 @@
     "createUpdaterArtifacts": true,
     "category": "Utility",
     "publisher": "Ariy VPN",
-    "shortDescription": "Ariy VPN РґР»СЏ Windows",
-    "longDescription": "Р”РµСЃРєС‚РѕРїРЅС‹Р№ VPN-РєР»РёРµРЅС‚ Ariy РґР»СЏ Windows РЅР° Р±Р°Р·Рµ sing-box Рё Mihomo. РџРѕРґРґРµСЂР¶РєР° VLESS+Reality, VMess, Trojan, Shadowsocks, Hysteria2, TUIC, WireGuard, AnyTLS. РџРѕРґРєР»СЋС‡РµРЅРёРµ РІ РѕРґРёРЅ РєР»РёРє С‡РµСЂРµР· СЃРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРєСЃРё РёР»Рё TUN. Be fast. Be stealthy. Be free.",
+    "shortDescription": "Ariy VPN для Windows",
+    "longDescription": "Десктопный VPN-клиент Ariy для Windows на базе sing-box и Mihomo. Поддержка VLESS+Reality, VMess, Trojan, Shadowsocks, Hysteria2, TUIC, WireGuard, AnyTLS. Подключение в один клик через системный прокси или TUN. Be fast. Be stealthy. Be free.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
