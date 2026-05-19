@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Nemefisto",
+  "productName": "Ariy VPN",
   "version": "0.3.3",
-  "identifier": "com.nemefisto.vpn-client",
+  "identifier": "com.ariyvpn.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Nemefisto",
+        "title": "Ariy VPN",
         "width": 460,
         "height": 920,
         "minWidth": 420,
@@ -26,16 +26,16 @@
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": ["nemefisto"]
+        "schemes": ["ariy"]
       }
     },
     "updater": {
       "active": true,
       "dialog": false,
       "endpoints": [
-        "https://github.com/kanabicks/NemefistoAPP/releases/latest/download/latest.json"
+        "https://github.com/MeinCain/ariy-vpn-desktop/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZGQTJCMDc0QUI2NjA1QUMKUldTc0JXYXJkTENpLzYvMnZDUUZqeHBlVHZ0TjNIb2d3aHJtdjBIUEpQNWZiZnQ1UTJ5b1IwTVAK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEI5NjVFOUMxREE0QzlGRDAKUldUUW4wemF3ZWxsdWJXaUtILzBBT2ZlcFpMQ3ZXNFc5eHpPYzR3SWpITTVvWHl4ckgxRFdVeVcK",
       "windows": {
         "installMode": "passive"
       }
@@ -46,9 +46,9 @@
     "targets": ["nsis"],
     "createUpdaterArtifacts": true,
     "category": "Utility",
-    "publisher": "Nemefisto",
-    "shortDescription": "VPN-клиент на sing-box и Mihomo",
-    "longDescription": "Лёгкий VPN-клиент для Windows на базе sing-box и Mihomo. Поддержка VLESS, VMess, Trojan, Shadowsocks, Hysteria2, TUIC, WireGuard, AnyTLS. Подключение в один клик через системный прокси или TUN.",
+    "publisher": "Ariy VPN",
+    "shortDescription": "Ariy VPN для Windows",
+    "longDescription": "Десктопный VPN-клиент Ariy для Windows на базе sing-box и Mihomo. Поддержка VLESS+Reality, VMess, Trojan, Shadowsocks, Hysteria2, TUIC, WireGuard, AnyTLS. Подключение в один клик через системный прокси или TUN. Be fast. Be stealthy. Be free.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -62,7 +62,7 @@
     ],
     "resources": {
       "binaries/wintun.dll": "wintun.dll",
-      "binaries/nemefisto-helper-x86_64-pc-windows-msvc.exe": "nemefisto-helper-x86_64-pc-windows-msvc.exe",
+      "binaries/ariy-helper-x86_64-pc-windows-msvc.exe": "ariy-helper-x86_64-pc-windows-msvc.exe",
       "binaries/geoip.dat": "resources/geoip.dat",
       "binaries/geosite.dat": "resources/geosite.dat"
     },

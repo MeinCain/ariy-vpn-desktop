@@ -2,7 +2,7 @@
 
 С версии **0.1.3** релизы публикуются автоматически через GitHub Actions
 на push тега `v*.*.*`. Auto-updater приложения (`tauri-plugin-updater`)
-проверяет endpoint `https://github.com/kanabicks/NemefistoAPP/releases/latest/download/latest.json`
+проверяет endpoint `https://github.com/MeinCain/ariy-vpn-desktop/releases/latest/download/latest.json`
 раз в 6 часов и предлагает юзеру обновиться.
 
 ## Одноразовая настройка
@@ -67,8 +67,8 @@ git push origin v0.1.4
    - подписывает .exe ed25519-ключом из `TAURI_SIGNING_PRIVATE_KEY`;
    - генерирует `latest.json` (manifest для updater);
    - создаёт GitHub Release с тегом и публикует assets:
-     - `Nemefisto_<VER>_x64-setup.exe`
-     - `Nemefisto_<VER>_x64-setup.exe.sig` (подпись)
+     - `Ariy VPN_<VER>_x64-setup.exe`
+     - `Ariy VPN_<VER>_x64-setup.exe.sig` (подпись)
      - `latest.json`
 
 После этого:
@@ -88,7 +88,7 @@ git push origin v0.1.4
   "platforms": {
     "windows-x86_64": {
       "signature": "...",
-      "url": "https://github.com/.../Nemefisto_0.1.4_x64-setup.exe"
+      "url": "https://github.com/.../Ariy VPN_0.1.4_x64-setup.exe"
     }
   }
 }
@@ -122,7 +122,7 @@ git push origin :refs/tags/v0.1.4
 
 ```powershell
 npm run tauri:bundle
-# Результат: src-tauri/target/release/bundle/nsis/Nemefisto_<VER>_x64-setup.exe
+# Результат: src-tauri/target/release/bundle/nsis/Ariy VPN_<VER>_x64-setup.exe
 ```
 
 ⚠️ Этот NSIS не подписан (нет ed25519-подписи) — auto-updater откажется

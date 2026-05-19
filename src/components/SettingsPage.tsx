@@ -1256,27 +1256,27 @@ export function SettingsPage({ onClose }: { onClose: () => void }) {
                 </p>
                 <div className="schemes">
                   <div className="scheme-row">
-                    <span className="scheme-url">nemefisto://add?url=&lt;url&gt;</span>
+                    <span className="scheme-url">ariy://add?url=&lt;url&gt;</span>
                     <span className="scheme-desc">{t("settings.urlSchemes.add")}</span>
                   </div>
                   <div className="scheme-row">
-                    <span className="scheme-url">nemefisto://connect</span>
+                    <span className="scheme-url">ariy://connect</span>
                     <span className="scheme-desc">{t("settings.urlSchemes.connect")}</span>
                   </div>
                   <div className="scheme-row">
-                    <span className="scheme-url">nemefisto://disconnect</span>
+                    <span className="scheme-url">ariy://disconnect</span>
                     <span className="scheme-desc">{t("settings.urlSchemes.disconnect")}</span>
                   </div>
                   <div className="scheme-row">
-                    <span className="scheme-url">nemefisto://toggle</span>
+                    <span className="scheme-url">ariy://toggle</span>
                     <span className="scheme-desc">{t("settings.urlSchemes.toggle")}</span>
                   </div>
                   <div className="scheme-row">
-                    <span className="scheme-url">nemefisto://export</span>
+                    <span className="scheme-url">ariy://export</span>
                     <span className="scheme-desc">{t("settings.urlSchemes.export")}</span>
                   </div>
                   <div className="scheme-row">
-                    <span className="scheme-url">nemefisto://import-from-url/&lt;url&gt;</span>
+                    <span className="scheme-url">ariy://import-from-url/&lt;url&gt;</span>
                     <span className="scheme-desc">{t("settings.urlSchemes.importFromUrl")}</span>
                   </div>
                 </div>
@@ -1563,8 +1563,8 @@ function AppRulesSection({ mihomoActive }: { mihomoActive: boolean }) {
  *   `parseBackup` → `useBackupModalStore.show(...)` → preview-модалка
  *   с diff'ом и кнопкой «применить».
  *
- * Также активны deep-link'и `nemefisto://export` и
- * `nemefisto://import-from-url/<url>` (см. lib/deepLinks.ts).
+ * Также активны deep-link'и `ariy://export` и
+ * `ariy://import-from-url/<url>` (см. lib/deepLinks.ts).
  */
 function BackupBlock() {
   const { t } = useTranslation();

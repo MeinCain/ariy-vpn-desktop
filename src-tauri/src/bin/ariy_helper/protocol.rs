@@ -222,9 +222,9 @@ impl Response {
     }
 }
 
-pub const PIPE_NAME: &str = r"\\.\pipe\nemefisto-helper";
-pub const SERVICE_NAME: &str = "NemefistoHelper";
-pub const SERVICE_DISPLAY_NAME: &str = "Nemefisto VPN Helper";
+pub const PIPE_NAME: &str = r"\\.\pipe\ariy-helper";
+pub const SERVICE_NAME: &str = "AriyHelper";
+pub const SERVICE_DISPLAY_NAME: &str = "Ariy VPN Helper";
 pub const SERVICE_DESCRIPTION: &str = "Управление TUN-интерфейсом и системной маршрутизацией для Nemefisto VPN.";
 
 #[cfg(test)]

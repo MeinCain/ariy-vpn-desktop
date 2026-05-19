@@ -1,14 +1,14 @@
 import type { VpnStatus } from "../stores/vpnStore";
 
-export const DASHBOARD_URL = "https://web.nemefisto.online";
-export const SUPPORT_URL = "https://t.me/nemefistovpn_bot";
+export const DASHBOARD_URL = "https://cabinet.example.com";
+export const SUPPORT_URL = "https://t.me/AriyVPN_Bot";
 
 // 14.J: версия приложения автоматически прокидывается из package.json
 // через vite define (см. vite.config.ts). Bump только в одном месте.
 declare const __APP_VERSION__: string;
 export const APP_VERSION = __APP_VERSION__;
 
-export const GITHUB_URL = "https://github.com/kanabicks/NemefistoAPP";
+export const GITHUB_URL = "https://github.com/MeinCain/ariy-vpn-desktop";
 export const PRIVACY_URL = `${GITHUB_URL}/blob/main/PRIVACY.md`;
 export const LICENSE_URL = `${GITHUB_URL}/blob/main/LICENSE`;
 

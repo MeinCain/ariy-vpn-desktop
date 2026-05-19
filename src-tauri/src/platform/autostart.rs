@@ -32,7 +32,7 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use tokio::process::Command;
 
-const TASK_NAME: &str = "Nemefisto VPN Autostart";
+const TASK_NAME: &str = "Ariy VPN Autostart";
 const SCHTASKS_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// CREATE_NO_WINDOW — создаём дочерний процесс БЕЗ консольного окна.

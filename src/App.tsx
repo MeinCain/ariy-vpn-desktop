@@ -49,7 +49,7 @@ import { openDashboard, useHasDashboardUrl } from "./lib/openExternal";
 /**
  * Корневой компонент. Координирует:
  * - инициализацию stores при mount (refresh status, кеш, hwid, on-open actions);
- * - подписку на deep-links (nemefisto://...);
+ * - подписку на deep-links (ariy://...);
  * - авто-подключение к последнему серверу при старте (если включено);
  * - фоновый авто-refresh подписки.
  *
@@ -157,7 +157,7 @@ function App() {
       }
     });
 
-    // Подписка на deep-link события (nemefisto://add | connect | ...)
+    // Подписка на deep-link события (ariy://add | connect | ...)
     let unlisten: (() => void) | undefined;
     initDeepLinks().then((u) => {
       unlisten = u;

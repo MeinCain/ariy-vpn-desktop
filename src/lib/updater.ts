@@ -100,7 +100,7 @@ export async function downloadAndInstall(
 
   // 0.3.1 / installer file-lock fix: перед перезапуском (которое
   // запускает NSIS installer в passive mode) грациозно стопим helper.
-  // Иначе NSIS не сможет перезаписать `nemefisto-helper.exe` (Windows
+  // Иначе NSIS не сможет перезаписать `ariy-helper.exe` (Windows
   // service держит open handle на файл) → "невозможно открыть файл для
   // записи" + abort. Helper после этого недоступен ~до первого connect,
   // там helper_bootstrap поднимет его заново.

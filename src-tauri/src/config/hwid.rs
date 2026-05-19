@@ -19,7 +19,7 @@ pub struct HwidState(pub String);
 fn hwid_path() -> Result<PathBuf> {
     let base = std::env::var("LOCALAPPDATA")
         .context("переменная LOCALAPPDATA не установлена")?;
-    Ok(PathBuf::from(base).join("NemefistoVPN").join("hwid.txt"))
+    Ok(PathBuf::from(base).join("AriyVPN").join("hwid.txt"))
 }
 
 /// Читает Windows MachineGuid из реестра. Для одной и той же установки

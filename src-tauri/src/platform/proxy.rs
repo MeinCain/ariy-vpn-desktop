@@ -21,7 +21,7 @@ use winreg::{enums::*, RegKey};
 const INET_SETTINGS: &str =
     r"Software\Microsoft\Windows\CurrentVersion\Internet Settings";
 
-const BACKUP_DIR: &str = "NemefistoVPN";
+const BACKUP_DIR: &str = "AriyVPN";
 const BACKUP_FILE: &str = "proxy_backup.json";
 
 /// Снимок настроек системного прокси для backup/restore.

@@ -87,7 +87,7 @@ pub fn install() -> Result<()> {
         start_type: ServiceStartType::AutoStart,
         error_control: ServiceErrorControl::Normal,
         executable_path: exe_path,
-        // SCM вызывает `nemefisto-helper.exe service` — флаг для main-а.
+        // SCM вызывает `ariy-helper.exe service` — флаг для main-а.
         launch_arguments: vec![OsString::from("service")],
         dependencies: vec![],
         account_name: None, // SYSTEM

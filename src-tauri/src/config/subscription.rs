@@ -302,9 +302,9 @@ fn apply_inline_directives(body: &str, meta_opt: &mut Option<SubscriptionMeta>) 
             continue;
         }
         // Routing-директивы. Префикс может быть как `://...`, так и
-        // `nemefisto://...` (для совместимости с deep-link форматом).
+        // `ariy://...` (для совместимости с deep-link форматом).
         let routing_payload = line
-            .strip_prefix("nemefisto://")
+            .strip_prefix("ariy://")
             .or_else(|| line.strip_prefix("://"));
         if let Some(rest) = routing_payload {
             let parts: Vec<&str> = rest.splitn(3, '/').collect();

@@ -76,7 +76,7 @@ pub fn init(app: &AppHandle<Wry>) -> tauri::Result<()> {
 
     let _tray = TrayIconBuilder::with_id(TRAY_ID)
         .icon(icon)
-        .tooltip("Nemefisto VPN — отключено")
+        .tooltip("Ariy VPN — отключено")
         .menu(&menu)
         // По умолчанию left-click открывает меню. Перехватываем чтобы
         // вместо этого делать toggle главного окна (одинарный клик —
@@ -166,13 +166,13 @@ pub fn set_status(
     // Tooltip — короткая строка, видна при hover в системном трее.
     let tooltip = match status {
         "running" => match server_name {
-            Some(name) => format!("Nemefisto VPN — {name}"),
-            None => "Nemefisto VPN — подключено".to_string(),
+            Some(name) => format!("Ariy VPN — {name}"),
+            None => "Ariy VPN — подключено".to_string(),
         },
-        "starting" => "Nemefisto VPN — подключаем…".to_string(),
-        "stopping" => "Nemefisto VPN — отключаем…".to_string(),
-        "error" => "Nemefisto VPN — ошибка".to_string(),
-        _ => "Nemefisto VPN — отключено".to_string(),
+        "starting" => "Ariy VPN — подключаем…".to_string(),
+        "stopping" => "Ariy VPN — отключаем…".to_string(),
+        "error" => "Ariy VPN — ошибка".to_string(),
+        _ => "Ariy VPN — отключено".to_string(),
     };
     tray.set_tooltip(Some(tooltip)).map_err(|e| e.to_string())?;
 

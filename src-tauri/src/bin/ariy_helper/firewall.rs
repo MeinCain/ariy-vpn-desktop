@@ -11,7 +11,7 @@
 //! Архитектура фильтров (по убыванию weight):
 //! - **W_DHCP=16** — DHCP/BOOTP UDP 67/68 (для получения IP в новой сети)
 //! - **W_APP=14** — наши процессы по абсолютному пути (sing-box.exe,
-//!   mihomo.exe, nemefisto-helper.exe, vpn-client.exe)
+//!   mihomo.exe, ariy-helper.exe, vpn-client.exe)
 //! - **W_SERVER=12** — IP VPN-сервера (резолв на стороне Tauri-main)
 //! - **W_LOOPBACK=10** — 127.0.0.0/8 (наш SOCKS5/HTTP inbound) + ::1/128
 //! - **W_LAN=8** — 10/8, 172.16/12, 192.168/16, 169.254/16 (если allow_lan=true)
@@ -190,11 +190,11 @@ fn enable_blocking(
     let engine = WfpEngine::open_dynamic().context("open WFP engine")?;
 
     engine.transaction(|e| {
-        e.add_provider(NEMEFISTO_PROVIDER_GUID, "Nemefisto VPN KillSwitch")?;
+        e.add_provider(NEMEFISTO_PROVIDER_GUID, "Ariy VPN KillSwitch")?;
         e.add_sublayer(
             NEMEFISTO_SUBLAYER_GUID,
             NEMEFISTO_PROVIDER_GUID,
-            "Nemefisto KillSwitch",
+            "Ariy KillSwitch",
             0xFFFF,
         )?;
 

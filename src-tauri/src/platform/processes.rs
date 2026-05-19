@@ -55,7 +55,7 @@ pub fn detect_competing_vpns() -> Vec<String> {
     ];
 
     // Самоисключение — наш собственный exe не считаем конкурентом.
-    const OUR_EXES: &[&str] = &["vpn-client", "nemefisto-helper", "xray", "mihomo", "tun2socks"];
+    const OUR_EXES: &[&str] = &["vpn-client", "ariy-helper", "xray", "mihomo", "tun2socks"];
 
     unsafe {
         let mut pids = vec![0u32; 4096];

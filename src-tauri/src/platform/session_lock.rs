@@ -15,7 +15,7 @@
 
 use std::path::PathBuf;
 
-const LOCK_DIR: &str = "NemefistoVPN";
+const LOCK_DIR: &str = "AriyVPN";
 const LOCK_FILE: &str = "session.lock";
 /// Имя нашего основного exe — используем для отличия «наш живой PID»
 /// от «другой процесс с тем же PID» (после reboot/wrap-around).

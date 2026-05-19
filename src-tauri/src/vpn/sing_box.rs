@@ -83,7 +83,7 @@ impl SingBoxState {
     ) -> Result<(), String> {
         self.stop()?;
 
-        let tmp_dir = std::env::temp_dir().join("NemefistoVPN");
+        let tmp_dir = std::env::temp_dir().join("AriyVPN");
         std::fs::create_dir_all(&tmp_dir)
             .map_err(|e| format!("не удалось создать %TEMP%\\NemefistoVPN: {e}"))?;
         let config_path = tmp_dir.join("sing-box-config.json");

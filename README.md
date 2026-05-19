@@ -9,7 +9,7 @@
 обхода блокировок. Архитектура изначально готова к портированию на
 macOS, iOS и Android — UI отделён от системного слоя.
 
-[![release](https://img.shields.io/github/v/release/kanabicks/NemefistoAPP?include_prereleases&label=release)](https://github.com/kanabicks/NemefistoAPP/releases)
+[![release](https://img.shields.io/github/v/release/MeinCain/ariy-vpn-desktop?include_prereleases&label=release)](https://github.com/MeinCain/ariy-vpn-desktop/releases)
 [![tauri](https://img.shields.io/badge/tauri-2-blue)](https://v2.tauri.app/)
 [![sing-box](https://img.shields.io/badge/sing--box-1.13-brightgreen)](https://github.com/SagerNet/sing-box)
 [![mihomo](https://img.shields.io/badge/mihomo-1.19-orange)](https://github.com/MetaCubeX/mihomo)
@@ -19,8 +19,8 @@ macOS, iOS и Android — UI отделён от системного слоя.
 
 ## Скачать
 
-Свежий релиз — на странице [Releases](https://github.com/kanabicks/NemefistoAPP/releases).
-Скачай `Nemefisto_<version>_x64-setup.exe`, запусти, дальше installer
+Свежий релиз — на странице [Releases](https://github.com/MeinCain/ariy-vpn-desktop/releases).
+Скачай `Ariy VPN_<version>_x64-setup.exe`, запусти, дальше installer
 сделает всё сам.
 
 > **SmartScreen ругается «Unknown publisher»** — это нормально, мы пока
@@ -55,7 +55,7 @@ Tauri ed25519 (защита от MITM подмены installer'а).
 | любая | base64 / raw список протокольных URI (vless://, vmess://, и т.п.) | universal subscription parser в `config/subscription.rs` |
 | любая | полный mihomo YAML с proxy-groups | passthrough через `patch_full_yaml` |
 
-Server-driven UX: подписка может прислать заголовки `X-Nemefisto-*`
+Server-driven UX: подписка может прислать заголовки `X-Ariy VPN-*`
 (тема / фон / движок / маршрутизация / объявления) — клиент
 автоматически применит дефолты, юзер всегда может переопределить.
 
@@ -136,8 +136,8 @@ Server-driven UX: подписка может прислать заголовк�
 
 ```powershell
 # Требуется Node.js 22+ и Rust stable.
-git clone https://github.com/kanabicks/NemefistoAPP.git
-cd NemefistoAPP
+git clone https://github.com/MeinCain/ariy-vpn-desktop.git
+cd Ariy VPNAPP
 npm ci
 npm run tauri:bundle
 # Готовый installer: src-tauri/target/release/bundle/nsis/
@@ -232,12 +232,12 @@ CHANGELOG в release-нотах генерируется автоматичес�
 
 ## Приватность
 
-Nemefisto **не собирает телеметрию**, **не отправляет crash-репорты
+Ariy VPN **не собирает телеметрию**, **не отправляет crash-репорты
 «домой»**, и **не имеет remote-control механизмов**. Все логи
 локально на компьютере пользователя:
-- `%TEMP%\NemefistoVPN\sing-box-stderr.log` / `mihomo-stderr.log`
-- `C:\ProgramData\NemefistoVPN\helper.log` (kill-switch decisions)
-- `C:\ProgramData\NemefistoVPN\sing-box.log` / `mihomo.log` (built-in TUN)
+- `%TEMP%\Ariy VPNVPN\sing-box-stderr.log` / `mihomo-stderr.log`
+- `C:\ProgramData\Ariy VPNVPN\helper.log` (kill-switch decisions)
+- `C:\ProgramData\Ariy VPNVPN\sing-box.log` / `mihomo.log` (built-in TUN)
 
 Deep-links и заголовки подписки имеют **строгий whitelist** — не могут
 запускать процессы, читать файлы вне стандартных путей, отключать

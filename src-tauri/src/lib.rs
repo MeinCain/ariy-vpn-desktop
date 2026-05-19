@@ -104,13 +104,13 @@ pub fn run() {
             let hwid = load_or_create().unwrap_or_else(|_| uuid::Uuid::new_v4().to_string());
             app.manage(HwidState(hwid));
 
-            // В dev-режиме регистрируем nemefisto:// в HKCU\Software\Classes
+            // В dev-режиме регистрируем ariy:// в HKCU\Software\Classes
             // для текущего пользователя. Production-инсталлятор пишет
             // регистрацию сам через bundle-metadata.
             #[cfg(any(windows, target_os = "linux"))]
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
-                let _ = app.deep_link().register("nemefisto");
+                let _ = app.deep_link().register("ariy");
             }
             // 6.C: запускаем watcher смены сети. Polling default-route
             // каждые 5 сек; при смене интерфейса emit-ится событие
@@ -144,7 +144,7 @@ pub fn run() {
                 "floating",
                 tauri::WebviewUrl::App("index.html".into()),
             )
-            .title("Nemefisto")
+            .title("Ariy VPN")
             .inner_size(190.0, 52.0)
             .min_inner_size(170.0, 48.0)
             .decorations(false)

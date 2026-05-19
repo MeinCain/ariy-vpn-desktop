@@ -915,7 +915,7 @@ pub async fn connect(
                 push_if_exists(exe.clone());
                 // helper.exe — не нужен для outbound, но добавим на
                 // случай future telemetry.
-                push_if_exists(exe_dir.join("nemefisto-helper.exe"));
+                push_if_exists(exe_dir.join("ariy-helper.exe"));
             }
         }
         // Resolve-функции тоже подключим (на случай если выше что-то
@@ -1117,7 +1117,7 @@ pub async fn kill_switch_heartbeat() -> Result<(), String> {
 #[tauri::command]
 pub async fn kill_switch_force_cleanup() -> Result<(), String> {
     // Гарантируем что helper доступен — иначе предложим запустить вручную
-    // через консоль (`nemefisto-helper killswitch-cleanup`).
+    // через консоль (`ariy-helper killswitch-cleanup`).
     if let Err(e) = platform::helper_bootstrap::ensure_running().await {
         return Err(format!("helper-сервис недоступен: {e}"));
     }
@@ -1270,7 +1270,7 @@ pub fn get_routing_table() -> Vec<platform::network::RouteEntry> {
 /// Graceful self-shutdown helper-сервиса. Используется auto-updater'ом
 /// перед запуском NSIS installer'а: helper освобождает свой `.exe`-файл
 /// (закрывает image-handle через SCM `SERVICE_CONTROL_STOP` себе же),
-/// после чего installer может перезаписать `nemefisto-helper.exe` без
+/// после чего installer может перезаписать `ariy-helper.exe` без
 /// admin-прав.
 ///
 /// После этой команды helper недоступен до следующего connect (там
@@ -1523,7 +1523,7 @@ pub fn get_hwid(hwid: State<'_, HwidState>) -> String {
 pub fn read_xray_log() -> Result<String, String> {
     use std::io::{Read, Seek, SeekFrom};
 
-    let tmp_dir = std::env::temp_dir().join("NemefistoVPN");
+    let tmp_dir = std::env::temp_dir().join("AriyVPN");
     let prog_dir = std::path::PathBuf::from(r"C:\ProgramData\NemefistoVPN");
 
     let candidates = [
@@ -1642,7 +1642,7 @@ pub fn export_diagnostics() -> Result<String, String> {
 
     // 2. xray-stderr.log (последние 32 КБ)
     let xray_log = std::env::temp_dir()
-        .join("NemefistoVPN")
+        .join("AriyVPN")
         .join("xray-stderr.log");
     if xray_log.is_file() {
         if let Ok(mut f) = std::fs::File::open(&xray_log) {
@@ -1842,7 +1842,7 @@ pub fn export_settings_to_documents(json: String) -> Result<String, String> {
 }
 
 /// 12.D: скачать backup-JSON по URL (нужен для deep-link
-/// `nemefisto://import-from-url/<url>`). Делается с no-proxy чтобы не
+/// `ariy://import-from-url/<url>`). Делается с no-proxy чтобы не
 /// зацикливаться через активный VPN. Размер ограничен 256 KB —
 /// настройки не должны весить больше, любой больший payload — подозрение
 /// на mistake/SSRF на large endpoint.

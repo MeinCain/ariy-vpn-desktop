@@ -297,7 +297,7 @@ export function RoutingProfilesPanel() {
           <div className="settings-row-hint" style={{ marginBottom: 12 }}>
             {t("routingProfiles.emptyHint")}
             <br />
-            <code>nemefisto://routing/onadd/{"{base64-or-url}"}</code>
+            <code>ariy://routing/onadd/{"{base64-or-url}"}</code>
           </div>
         )}
 

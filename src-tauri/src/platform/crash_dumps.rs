@@ -12,7 +12,7 @@
 //! их в bug-report через `export_diagnostics` (zip-архив).
 //!
 //! `install_panic_hook` вызывается ОДИН раз — в начале `lib::run()` для
-//! main-процесса и в начале `nemefisto_helper::main()` для helper'а.
+//! main-процесса и в начале `ariy_helper::main()` для helper'а.
 
 use std::backtrace::Backtrace;
 use std::fs::{create_dir_all, OpenOptions};
@@ -27,7 +27,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 /// но лучше деградировать gracefully чем падать в самом hook'е).
 pub fn crashes_dir() -> Option<PathBuf> {
     let appdata = std::env::var_os("LOCALAPPDATA")?;
-    Some(PathBuf::from(appdata).join("NemefistoVPN").join("crashes"))
+    Some(PathBuf::from(appdata).join("AriyVPN").join("crashes"))
 }
 
 /// Установить глобальный panic-hook. Сохраняет предыдущий хук
@@ -36,7 +36,7 @@ pub fn crashes_dir() -> Option<PathBuf> {
 /// helper-eventlog паника всё ещё была видна в консоли.
 ///
 /// `component` — короткое имя для имени файла: `vpn-client`,
-/// `nemefisto-helper`. Помогает отличить main-крах от helper-краха.
+/// `ariy-helper`. Помогает отличить main-крах от helper-краха.
 pub fn install_panic_hook(component: &'static str) {
     let prev = panic::take_hook();
     panic::set_hook(Box::new(move |info| {
@@ -71,7 +71,7 @@ fn write_crash_dump(
         .truncate(true)
         .open(&path)?;
 
-    writeln!(f, "Nemefisto crash dump")?;
+    writeln!(f, "Ariy VPN crash dump")?;
     writeln!(f, "----------------------")?;
     writeln!(f, "component: {component}")?;
     writeln!(f, "version:   {}", env!("CARGO_PKG_VERSION"))?;

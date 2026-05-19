@@ -6,7 +6,7 @@
 //! обработчик в отдельной задаче.
 //!
 //! ВАЖНО: типы должны точно совпадать с тегами в
-//! `src/bin/nemefisto_helper/protocol.rs`.
+//! `src/bin/ariy_helper/protocol.rs`.
 
 use std::time::Duration;
 
@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::windows::named_pipe::ClientOptions;
 
-const PIPE_NAME: &str = r"\\.\pipe\nemefisto-helper";
+const PIPE_NAME: &str = r"\\.\pipe\ariy-helper";
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "cmd", rename_all = "snake_case")]
@@ -109,7 +109,7 @@ pub enum HelperResponse {
 
 /// Минимально-поддерживаемая версия протокола. Если helper отвечает
 /// меньшей — `helper_bootstrap` форсит uninstall+install. Бампается
-/// синхронно с константой в `nemefisto_helper::protocol`.
+/// синхронно с константой в `ariy_helper::protocol`.
 pub const MIN_HELPER_PROTOCOL_VERSION: u32 = 9;
 
 /// Открыть pipe с retry — сервис может быть busy сразу после старта или
@@ -318,7 +318,7 @@ pub async fn singbox_stop() -> Result<()> {
 /// 0.3.1 / installer file-lock fix: graceful self-shutdown helper'а.
 ///
 /// Helper отвечает `Ok`, потом через ~200мс сам себя стопит через SCM.
-/// После этого `nemefisto-helper.exe` освобождается и NSIS installer
+/// После этого `ariy-helper.exe` освобождается и NSIS installer
 /// может его перезаписать без admin-прав.
 ///
 /// Pipe-disconnect после Ok нормален — сервис-процесс выходит. Поэтому

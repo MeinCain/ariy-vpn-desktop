@@ -16,7 +16,7 @@ use std::time::Duration;
 use anyhow::{bail, Context, Result};
 use serde::Serialize;
 
-const DIR_NAME: &str = "NemefistoVPN";
+const DIR_NAME: &str = "AriyVPN";
 const GEOFILES_SUBDIR: &str = "geofiles";
 
 /// Размер response-body, выше которого мы считаем файл подозрительным
@@ -180,7 +180,7 @@ fn build_no_proxy_client() -> Result<reqwest::Client> {
         .no_proxy()
         .connect_timeout(Duration::from_secs(15))
         .timeout(DOWNLOAD_TIMEOUT)
-        .user_agent(format!("Nemefisto/{}", env!("CARGO_PKG_VERSION")))
+        .user_agent(format!("Ariy/{}", env!("CARGO_PKG_VERSION")))
         .build()
         .context("сборка reqwest client")
 }
