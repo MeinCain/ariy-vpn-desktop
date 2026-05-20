@@ -380,10 +380,20 @@ input, textarea { font: inherit; cursor: text; }
 .frame {
   width: 100%;
   max-width: var(--frame-w);
+  /* min-height вместо фиксированной — frame растягивается на весь
+     viewport, чтобы footer прижимался к низу, а main-grid с
+     `margin-block: auto` повисал по вертикальному центру. Это решает
+     жалобу «всё нагромождено вверху, внизу пусто». */
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   padding: 18px 22px 24px;
   gap: 16px;
+}
+/* main-grid в .frame — flex-child с auto-margin'ами → центрируется
+   вертикально между Header (сверху) и dashboard-link+Footer (внизу). */
+.frame > .main-grid {
+  margin-block: auto;
 }
 
 /* main-grid: единая колонка mobile-flow на всех ширинах
@@ -536,12 +546,12 @@ input, textarea { font: inherit; cursor: text; }
 
 /* ── Tagline «Be fast. Be stealthy. Be free.» под power-кнопкой ──── */
 .ariy-tagline {
-  margin-top: 6px;
+  margin-top: 8px;
   text-align: center;
   font-family: var(--display);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--fg-dim);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
   letter-spacing: 0.01em;
 }
 .ariy-tagline-accent { color: var(--accent); }
@@ -634,10 +644,11 @@ input, textarea { font: inherit; cursor: text; }
 .country-drawer-overlay {
   position: fixed;
   inset: 0;
-  z-index: 100;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.7);
+  /* backdrop-filter убран — в Tauri WebView2 со старым GPU-стеком
+     рендер blur'а иногда обнуляет дочерний слой (юзер видел «пустую
+     страницу» в beta.14). Чистый dim-фон надёжнее на любом железе. */
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -650,13 +661,16 @@ input, textarea { font: inherit; cursor: text; }
 .country-drawer {
   width: 100%;
   max-width: 460px;
-  max-height: 85vh;
+  max-height: 85dvh;
+  min-height: 220px;
   background: #0a1020;
+  color: var(--fg);
   border-top: 1px solid var(--line-strong);
   border-radius: 18px 18px 0 0;
   display: flex;
   flex-direction: column;
   padding: 8px 0 6px;
+  box-shadow: 0 -24px 60px -20px rgba(0, 0, 0, 0.6);
   animation: drawer-in 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 @keyframes drawer-in {

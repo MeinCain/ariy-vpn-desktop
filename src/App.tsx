@@ -39,6 +39,8 @@ import { ModeSegment } from "./components/ModeSegment";
 import { Footer } from "./components/Footer";
 import { SettingsPage } from "./components/SettingsPage";
 import { openDashboard } from "./lib/openExternal";
+import { useAuthStore } from "./stores/authStore";
+import { apiFetchAuthMe } from "./lib/ariy-api";
 
 /**
  * Корневой компонент. Координирует:
@@ -127,7 +129,27 @@ function App() {
     // Этап 6.A: подтягиваем URL/HWID из Windows Credential Manager
     // (с миграцией из localStorage при первом запуске). Делаем до
     // refreshOnOpen, чтобы fetchSubscription использовал актуальный URL.
-    void loadSecureCreds().then(() => {
+    void loadSecureCreds().then(async () => {
+      // Auto-recovery: если у юзера есть валидный session_token, но
+      // sub_url в Credential Manager пустой (например, после обновления
+      // приложения, когда keyring запись не пережила install), —
+      // достаём sub_url через `/v1/auth/me` и подсовываем в subscription
+      // store. Без этого юзер видел Welcome-экран после auto-update,
+      // хотя его session ещё валидна.
+      const { sessionToken } = useAuthStore.getState();
+      const sub = useSubscriptionStore.getState();
+      if (sessionToken && !sub.url && sub.subscriptions.length === 0) {
+        try {
+          const me = await apiFetchAuthMe(sessionToken);
+          if (me && me.sub_url) {
+            useSubscriptionStore.getState().setUrl(me.sub_url);
+            await useSubscriptionStore.getState().fetchSubscription();
+            return; // fetchSubscription уже refresh'нул всё — двойной не нужен
+          }
+        } catch (e) {
+          console.warn("[mount] apiFetchAuthMe recovery failed", e);
+        }
+      }
       if (refreshOnOpen) {
         void fetchSubscription();
       } else if (pingOnOpen) {
