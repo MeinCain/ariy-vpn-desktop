@@ -186,6 +186,14 @@ pub fn detect_routing_conflicts() -> Vec<String> {
             "logmein",
             "openvpn tap", // OpenVPN TAP-Windows adapter — обычно для корпоративных сетей
             "tap-windows",
+            // Орфаны от upstream'а Nemefisto и наши собственные предыдущие
+            // сессии — это **тот же sing-box.exe** что и у нас, безопасно
+            // игнорировать. Иначе после crash'а Nemefisto или нашей же
+            // прошлой сессии юзер видит «Конфликт VPN» хотя ничего активно
+            // не работает — это просто orphan TUN-адаптер в `OperStatus=Up`,
+            // который sing-box не успел почистить при crash'е.
+            "nemefisto-",
+            "ariy-",
         ];
 
         let mut aliases: Vec<String> = Vec::new();

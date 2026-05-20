@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useSubscriptionStore } from "../stores/subscriptionStore";
 import { useAuthStore } from "../stores/authStore";
+import { apiFetchSubUrl } from "../lib/ariy-api";
 import { DASHBOARD_URL } from "../lib/constants";
 
 /**
@@ -43,15 +44,30 @@ export function Welcome() {
   const [dragActive, setDragActive] = useState(false);
   const lastSessionToken = useRef<string | null>(null);
 
-  // После того как сессия появилась — показываем юзеру что логин прошёл.
-  // backend endpoint `GET /v1/sub/:token` пока не задеплоен, поэтому
-  // автоматически подписку фетчить не можем — юзеру говорим явно
-  // (toast через emailError, который рендерится в форме).
+  // Login успешен — автоматом получаем sub_url через backend и
+  // подставляем в subscriptionStore. Юзер сразу видит свою подписку,
+  // ничего вручную копировать не надо.
+  //
+  // Если backend endpoint /v1/auth/sub_url ещё не задеплоен или вернул
+  // null — фоллбэк на ручной ввод через "sub-url" expand.
   useEffect(() => {
     if (sessionToken && sessionToken !== lastSessionToken.current) {
       lastSessionToken.current = sessionToken;
-      console.log("[Welcome] login OK, session_token saved. End-to-end depends on backend /v1/sub/:token (TBD).");
-      setEmailError("Вы вошли. Скачивание подписки ещё не активно (backend endpoint в разработке) — пока используйте «Использовать ссылку подписки».");
+      console.log("[Welcome] login OK, fetching sub_url...");
+      void (async () => {
+        const sub = await apiFetchSubUrl(sessionToken);
+        if (sub) {
+          console.log("[Welcome] got sub_url, auto-filling");
+          setSubUrl(sub);
+          void fetchSubscription();
+        } else {
+          console.warn("[Welcome] sub_url endpoint вернул null — fallback на ручной ввод");
+          setEmailError(
+            "Вы вошли. Не удалось автоматически получить ссылку подписки — backend endpoint /v1/auth/sub_url ещё не задеплоен. Скопируйте её из кабинета вручную."
+          );
+          setExpand("sub-url");
+        }
+      })();
     }
   }, [sessionToken]);
 

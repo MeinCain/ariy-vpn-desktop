@@ -148,6 +148,37 @@ export type AriyMe = {
   subscription_active: boolean;
 };
 
+/**
+ * Получить sub_url юзера через `/v1/auth/me`. Auth-api уже хранит
+ * `session.subscriptionUrl` (заполняется при login через TG/email).
+ * После лёгкого расширения response `/v1/auth/me` (добавили поле
+ * `sub_url`) клиент тащит его одним запросом и автоподставляет в
+ * subscriptionStore. Никаких новых endpoint'ов выдумывать не надо.
+ *
+ * Возвращает строку sub_url или null если что-то пошло не так.
+ */
+export async function apiFetchSubUrl(sessionToken: string): Promise<string | null> {
+  if (!sessionToken) return null;
+  console.log("[ariy-api] auth/me (для sub_url) ->");
+  let r: Response;
+  try {
+    r = await fetch(`${API_BASE}/v1/auth/me`, {
+      method: "GET",
+      headers: { Accept: "application/json", Authorization: `Bearer ${sessionToken}` },
+      connectTimeout: LOGIN_TIMEOUT_MS,
+    });
+  } catch (e) {
+    console.error("[ariy-api] auth/me network error", e);
+    return null;
+  }
+  console.log("[ariy-api] auth/me <- HTTP", r.status);
+  if (!r.ok) return null;
+  try {
+    const body: any = await r.json();
+    return typeof body?.sub_url === "string" ? body.sub_url : null;
+  } catch { return null; }
+}
+
 export async function apiMe(sessionToken: string): Promise<AriyMe | null> {
   if (!sessionToken) return null;
   let r: Response;
