@@ -1,22 +1,27 @@
 @import "tailwindcss";
 
-/* Nemefisto — VPN-клиент, mobile-first дизайн с адаптивом под десктоп.
-   Эстетика: тёмный, минималистичный, мягкие скругления, glass-blur,
-   как iOS-приложение в монохромной палитре сайта nemefisto.online. */
+/* Ariy VPN — десктопный клиент, mobile-first дизайн с адаптивом под десктоп.
+   Эстетика: тёмная navy палитра + brand-blue акценты, мягкие скругления,
+   glass-blur. Palette подсмотрена с example.com (shadcn/ui dark theme):
+     --primary  217 91% 60%  → #3b82f6  (Tailwind blue-500, наш brand)
+     --primary-glow  213 94% 72%  → #7eb9fa
+     --background  220 45% 6%  → #080b16  (deep navy) */
 
 :root {
-  --bg: #050505;
-  --bg-2: #0a0a0a;
-  --bg-glass: rgba(15, 15, 16, 0.55);
-  --fg: #f5f5f3;
-  --fg-dim: #9d9d99;
-  --fg-mute: #5e5e5b;
+  --bg: #080b16;
+  --bg-2: #0e1322;
+  --bg-glass: rgba(13, 18, 33, 0.6);
+  --fg: #f8fafc;
+  --fg-dim: #94a3b8;
+  --fg-mute: #64748b;
   --line: rgba(255, 255, 255, 0.06);
-  --line-strong: rgba(255, 255, 255, 0.14);
+  --line-strong: rgba(123, 156, 226, 0.18);
   --grid: rgba(255, 255, 255, 0.03);
-  --accent: #ffffff;
-  --warn: #d97757;
-  --ok: #4ade80;
+  --accent: #3b82f6;
+  --accent-2: #7eb9fa;
+  --accent-3: #2563eb;
+  --warn: #f59e0b;
+  --ok: #22c55e;
   /* Vignette / overlay-цвета — параметризованы для смены темы */
   --vignette: rgba(0, 0, 0, 0.6);
   --overlay-strong: rgba(5, 5, 5, 0.92);
@@ -3576,13 +3581,13 @@ input, textarea { font: inherit; cursor: text; }
   position: absolute;
   inset: -28px;
   border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(53, 120, 245, 0.45), rgba(27, 52, 134, 0.1) 60%, transparent 80%);
+  background: radial-gradient(closest-side, rgba(59, 130, 246, 0.45), rgba(27, 52, 134, 0.1) 60%, transparent 80%);
   filter: blur(8px);
   z-index: -1;
 }
 .ariy-hero-logo img {
   width: 100%; height: 100%; object-fit: contain;
-  filter: drop-shadow(0 6px 18px rgba(53, 120, 245, 0.35));
+  filter: drop-shadow(0 6px 18px rgba(59, 130, 246, 0.35));
 }
 .ariy-hero-title {
   font-family: var(--display);
@@ -3624,10 +3629,10 @@ input, textarea { font: inherit; cursor: text; }
 .ariy-cta:not(:disabled):active { transform: translateY(0); }
 
 .ariy-cta-tg {
-  background: linear-gradient(180deg, #3a86f5 0%, #2d6fdf 100%);
-  box-shadow: 0 8px 24px rgba(53, 120, 245, 0.35), 0 1px 0 rgba(255, 255, 255, 0.18) inset;
+  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4), 0 1px 0 rgba(255, 255, 255, 0.18) inset;
 }
-.ariy-cta-tg:hover { box-shadow: 0 10px 28px rgba(53, 120, 245, 0.5), 0 1px 0 rgba(255, 255, 255, 0.22) inset; }
+.ariy-cta-tg:hover { box-shadow: 0 10px 28px rgba(59, 130, 246, 0.55), 0 1px 0 rgba(255, 255, 255, 0.22) inset; }
 
 .ariy-cta-secondary {
   background: linear-gradient(180deg, #1f2c4d 0%, #18223e 100%);
@@ -3668,7 +3673,7 @@ input, textarea { font: inherit; cursor: text; }
   transition: color 0.15s;
   text-align: center;
 }
-.ariy-link:hover { color: #6aa3ff; }
+.ariy-link:hover { color: #7eb9fa; }
 .ariy-link-dim { color: rgba(170, 181, 207, 0.55); }
 .ariy-link-dim:hover { color: rgba(170, 181, 207, 0.85); }
 
@@ -3687,7 +3692,7 @@ input, textarea { font: inherit; cursor: text; }
   padding: 22px;
   border-radius: 14px;
   background: rgba(15, 23, 48, 0.45);
-  border: 1px solid rgba(53, 120, 245, 0.25);
+  border: 1px solid rgba(59, 130, 246, 0.25);
   text-align: center;
 }
 .ariy-tg-pending-title {

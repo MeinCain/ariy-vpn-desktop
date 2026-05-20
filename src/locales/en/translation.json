@@ -35,6 +35,7 @@
   },
   "header": {
     "dashboard": "dashboard",
+    "support": "support",
     "settings": "settings",
     "addSubscription": "add subscription"
   },

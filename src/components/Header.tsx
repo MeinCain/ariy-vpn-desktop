@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { useUtcClock } from "../lib/hooks/useUtcClock";
-import { openDashboard, useHasDashboardUrl } from "../lib/openExternal";
+import { openSupport } from "../lib/openExternal";
 import { useSubscriptionStore } from "../stores/subscriptionStore";
-import { SettingsIcon, UserIcon } from "./icons";
+import { SettingsIcon, SupportIcon } from "./icons";
 
 /**
  * Шапка приложения: лого + UTC-часы + + (добавить подписку) +
@@ -11,7 +11,6 @@ import { SettingsIcon, UserIcon } from "./icons";
 export function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
   const { t } = useTranslation();
   const utcTime = useUtcClock();
-  const hasDashboardUrl = useHasDashboardUrl();
   // 0.3.0: + кнопка для добавления подписки. Видна только когда уже есть
   // хотя бы одна (subscriptions[].length > 0). При первом запуске (Welcome)
   // прятать — там и так центральная форма ввода URL.
@@ -57,17 +56,15 @@ export function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
             </svg>
           </button>
         )}
-        {hasDashboardUrl && (
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={openDashboard}
-            aria-label={t("header.dashboard")}
-            title={t("header.dashboard")}
-          >
-            <UserIcon />
-          </button>
-        )}
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={openSupport}
+          aria-label={t("header.support")}
+          title={t("header.support")}
+        >
+          <SupportIcon />
+        </button>
         <button
           type="button"
           className="icon-btn"

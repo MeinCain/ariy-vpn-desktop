@@ -1,7 +1,7 @@
 import type { VpnStatus } from "../stores/vpnStore";
 
 export const DASHBOARD_URL = "https://cabinet.example.com";
-export const SUPPORT_URL = "https://t.me/AriyVPN_Bot";
+export const SUPPORT_URL = "https://t.me/example_support_bot";
 
 // 14.J: версия приложения автоматически прокидывается из package.json
 // через vite define (см. vite.config.ts). Bump только в одном месте.

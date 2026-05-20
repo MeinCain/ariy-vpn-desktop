@@ -190,7 +190,10 @@ export const findSelectedIndexByName = (
 export const useVpnStore = create<VpnState>((set, get) => ({
   status: "stopped",
   errorMessage: null,
-  mode: "proxy",
+  // По умолчанию TUN — весь трафик через VPN. «Системный прокси» имеет
+  // ограничения (только HTTP/HTTPS, не весь стек), и для типичного юзера
+  // Ariy это менее интуитивно. Юзер может переключить в Settings.
+  mode: "tun",
   selectedIndex: null,
   socksPort: null,
   httpPort: null,

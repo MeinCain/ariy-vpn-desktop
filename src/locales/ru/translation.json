@@ -35,6 +35,7 @@
   },
   "header": {
     "dashboard": "личный кабинет",
+    "support": "поддержка",
     "settings": "настройки",
     "addSubscription": "добавить подписку"
   },
