@@ -4,6 +4,7 @@ import { PRESET_BUTTON_STYLE } from "../stores/settingsStore";
 import { useEffectiveSettings } from "../lib/hooks/useEffectiveSettings";
 import { POWER_LABEL_CLS } from "../lib/constants";
 import { PowerIcon } from "./icons";
+import { ConnectionTimer } from "./ConnectionTimer";
 
 /**
  * Центральный блок: круглая power-кнопка, status-pill сверху,
@@ -12,7 +13,6 @@ import { PowerIcon } from "./icons";
 export function PowerStack({ canConnect }: { canConnect: boolean }) {
   const { t } = useTranslation();
   const status = useVpnStore((s) => s.status);
-  const mode = useVpnStore((s) => s.mode);
   const socksUsername = useVpnStore((s) => s.socksUsername);
   const socksPassword = useVpnStore((s) => s.socksPassword);
   const connect = useVpnStore((s) => s.connect);
@@ -37,15 +37,13 @@ export function PowerStack({ canConnect }: { canConnect: boolean }) {
           <colored-state>» прямо под кнопкой. */}
       <button
         type="button"
-        className={`power-btn power-btn-${effectiveButtonStyle}${isRunning ? " is-running" : ""}`}
+        className={`power-btn power-btn-${effectiveButtonStyle} no-label${isRunning ? " is-running" : ""}`}
         disabled={isRunning ? isBusy : !canConnect}
         onClick={onClick}
         aria-label={isRunning ? t("power.disconnect") : t("power.connect")}
+        title={isRunning ? t("power.disconnect") : t("power.connect")}
       >
         <PowerIcon />
-        <span>
-          {isBusy ? "…" : isRunning ? t("power.disconnect") : t("power.connect")}
-        </span>
       </button>
 
       <div style={{ textAlign: "center" }}>
@@ -55,13 +53,11 @@ export function PowerStack({ canConnect }: { canConnect: boolean }) {
             {t(`status.label.${status}`)}
           </span>
         </div>
+        {/* Таймер 00:00:00 — отсчитывает с момента подключения, иначе
+            показывает «00:00:00» как placeholder (как в Chrome-расширении). */}
+        <ConnectionTimer />
         {isRunning && socksUsername && socksPassword && (
           <LanCredentials user={socksUsername} pass={socksPassword} />
-        )}
-        {!isRunning && (
-          <div className="power-detail" style={{ marginTop: 6 }}>
-            {t("power.modeLabel", { mode: t(`mode.${mode}`) })}
-          </div>
         )}
       </div>
     </div>

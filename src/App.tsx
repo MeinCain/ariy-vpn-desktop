@@ -30,15 +30,13 @@ import { Header } from "./components/Header";
 import { PowerStack } from "./components/PowerStack";
 import { CurrentServerWidget } from "./components/CurrentServerWidget";
 import { CountryDrawer } from "./components/CountryDrawer";
-import { CompactSubInfo } from "./components/CompactSubInfo";
+import { SubscriptionStrip } from "./components/SubscriptionStrip";
 import { Welcome } from "./components/Welcome";
-import { BandwidthMeter } from "./components/BandwidthMeter";
 import { Toaster } from "./components/Toaster";
 import { runLeakTest } from "./lib/leakTest";
 import { ModeSegment } from "./components/ModeSegment";
 import { Footer } from "./components/Footer";
 import { SettingsPage } from "./components/SettingsPage";
-import { openDashboard } from "./lib/openExternal";
 import { useAuthStore } from "./stores/authStore";
 import { apiFetchAuthMe } from "./lib/ariy-api";
 
@@ -432,29 +430,36 @@ function App() {
           <AnnounceBanner />
           <Header onOpenSettings={() => setSettingsOpen(true)} />
 
+          {/* Sub-strip снова под Header'ом — как в Chrome-расширении
+              Ariy и в mockup'е, который юзер прислал. user_id / тариф /
+              трафик / дни + 🎁 + ×. CompactSubInfo под кнопкой удалён. */}
+          {hasSubscription && <SubscriptionStrip />}
+
           <div className="main-grid">
             <div className="grid-power">
               <PowerStack canConnect={canConnect} />
-              {/* Под power-кнопкой: брендовый девиз → компактная инфо о
-                  подписке (тариф/трафик/срок) — обе видны только когда
-                  у юзера уже есть подписка. */}
+              {/* Девиз под таймером, как на референсном скриншоте. */}
               {hasSubscription && (
-                <>
-                  <div className="ariy-tagline">
-                    Be fast. <span className="ariy-tagline-accent">Be stealthy.</span> Be free.
-                  </div>
-                  <CompactSubInfo />
-                </>
+                <div className="ariy-tagline">
+                  Be fast. <span className="ariy-tagline-accent">Be stealthy.</span> Be free.
+                </div>
               )}
             </div>
             <div className="grid-servers">
               {hasSubscription ? (
                 <>
-                  {/* Большой server-widget на месте бывшей subscription-
-                      карточки. Клик → CountryDrawer снизу со списком стран
-                      + флагами + цветными точками доступности. */}
                   <CurrentServerWidget onPick={() => setDrawerOpen(true)} />
-                  <BandwidthMeter />
+                  {/* ModeSegment под server-pill — переключатель «системный
+                      прокси / TUN» как в референсе. Видим только когда
+                      сервер выбран (бессмысленно переключать режим без
+                      подписки) и tunOnlyStrict выключен. */}
+                  {!tunOnlyStrict && (
+                    <ModeSegment
+                      mode={mode}
+                      onChange={setMode}
+                      disabled={isRunning || isBusy}
+                    />
+                  )}
                 </>
               ) : (
                 <Welcome />
@@ -463,32 +468,7 @@ function App() {
             {errorMessage && (
               <pre className="hero-error grid-error">{errorMessage}</pre>
             )}
-            {hasSubscription && !tunOnlyStrict && (
-              <div className="grid-mode">
-                <ModeSegment
-                  mode={mode}
-                  onChange={setMode}
-                  disabled={isRunning || isBusy}
-                />
-              </div>
-            )}
           </div>
-
-          {/* Кнопка «Личный кабинет →» над футером — юзер просил вернуть
-              именно это место (раньше она была в App.tsx до beta.12,
-              ошибочно убрал её в UI-rework'е). Открывает cabinet.example.com
-              через openDashboard() — захардкоженный URL, не зависит от
-              `profile-web-page-url` из подписки. */}
-          {hasSubscription && (
-            <button
-              type="button"
-              onClick={openDashboard}
-              className="dashboard-link"
-            >
-              <span>{t("header.dashboard")}</span>
-              <span className="dashboard-link-arrow">→</span>
-            </button>
-          )}
 
           <Footer />
         </div>
