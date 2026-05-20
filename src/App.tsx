@@ -452,11 +452,18 @@ function App() {
             <div className="grid-servers">
               {hasSubscription ? (
                 <>
-                  <CurrentServerWidget onPick={() => setDrawerOpen(true)} />
+                  <CurrentServerWidget onPick={() => setDrawerOpen((v) => !v)} />
+                  {/* CountryDrawer теперь inline expand сразу под текущим
+                      сервером — никаких overlay'ев, fixed-позиций, blur'а
+                      или порталов. После трёх неудачных попыток с
+                      bottom-sheet-overlay в Tauri WebView2 (юзер видел
+                      «пустую страницу») сдался на простой block-flow. */}
+                  <CountryDrawer
+                    open={drawerOpen}
+                    onClose={() => setDrawerOpen(false)}
+                  />
                   {/* ModeSegment под server-pill — переключатель «системный
-                      прокси / TUN» как в референсе. Видим только когда
-                      сервер выбран (бессмысленно переключать режим без
-                      подписки) и tunOnlyStrict выключен. */}
+                      прокси / TUN» как в референсе. */}
                   {!tunOnlyStrict && (
                     <ModeSegment
                       mode={mode}
@@ -477,11 +484,6 @@ function App() {
           <Footer />
         </div>
       </div>
-
-      <CountryDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-      />
 
       {settingsOpen && (
         <SettingsPage onClose={() => setSettingsOpen(false)} />

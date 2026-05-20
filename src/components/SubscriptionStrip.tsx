@@ -119,7 +119,9 @@ export function SubscriptionStrip() {
         <div className="sub-strip-stats">
           {tariff && (
             <>
-              <span>{t("subStrip.tariff", { name: tariff })}</span>
+              <span className="sub-strip-tariff">
+                {t("subStrip.tariff", { name: tariff })}
+              </span>
               <span className="sep">·</span>
             </>
           )}
