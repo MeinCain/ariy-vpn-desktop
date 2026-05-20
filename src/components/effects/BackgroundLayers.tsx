@@ -1,13 +1,8 @@
 /**
- * Фоновые fixed-слои поверх viewport: сетка, виньетка, scanline-overlay.
- * Не имеют интерактивности и pointer-events: none — никаких кликов не ловят.
+ * Фоновый fixed-слой: только мягкая виньетка по краям. Сетка и scanlines
+ * убраны — пользователь Ariy жаловался на «полосы» в дизайне, поэтому
+ * оставили только этот один pointer-events:none слой.
  */
 export function BackgroundLayers() {
-  return (
-    <>
-      <div className="grid-bg" />
-      <div className="vignette" />
-      <div className="scanlines" />
-    </>
-  );
+  return <div className="vignette" />;
 }

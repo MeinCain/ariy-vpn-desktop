@@ -456,6 +456,39 @@ input, textarea { font: inherit; cursor: text; }
   padding: 14px 0 8px;
 }
 
+/* Плашка «текущий сервер» — read-only индикатор под power-кнопкой.
+   Видна когда selectedIndex !== null. Подсвечивается brand-blue
+   когда VPN активен (is-active). */
+.current-server-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px auto 4px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: rgba(8, 11, 22, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-family: var(--display);
+  font-size: 13px;
+  color: var(--fg);
+  max-width: 92%;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+.current-server-pill.is-active {
+  border-color: rgba(59, 130, 246, 0.55);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.18),
+              0 8px 24px -10px rgba(59, 130, 246, 0.35);
+}
+.current-server-pill-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+  letter-spacing: 0.02em;
+}
+
 /* Status pill */
 .status-pill {
   font-family: var(--mono);
@@ -478,10 +511,10 @@ input, textarea { font: inherit; cursor: text; }
   border-radius: 50%;
   background: var(--fg-mute);
 }
-.status-pill.is-running { color: var(--fg); border-color: rgba(74, 222, 128, 0.45); }
+.status-pill.is-running { color: var(--fg); border-color: rgba(59, 130, 246, 0.45); }
 .status-pill.is-running .dot {
-  background: var(--ok);
-  box-shadow: 0 0 10px var(--ok);
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
   animation: pulse-soft 1.8s infinite;
 }
 .status-pill.is-busy { color: var(--fg); }
@@ -562,23 +595,23 @@ input, textarea { font: inherit; cursor: text; }
 }
 .power-btn-glass:hover:not(:disabled) { border-color: rgba(255,255,255,0.32); }
 .power-btn-glass.is-running {
-  border-color: rgba(74, 222, 128, 0.55);
+  border-color: rgba(59, 130, 246, 0.55);
   animation: power-breathe-ok 3.5s ease-in-out infinite;
 }
 @keyframes power-breathe-ok {
   0%, 100% {
     box-shadow:
       0 18px 44px -12px rgba(0,0,0,0.7),
-      0 0 24px rgba(74, 222, 128, 0.18),
-      0 0 0 1px rgba(74, 222, 128, 0.18),
+      0 0 24px rgba(59, 130, 246, 0.22),
+      0 0 0 1px rgba(59, 130, 246, 0.22),
       inset 0 1px 0 rgba(255,255,255,0.05);
   }
   50% {
     box-shadow:
       0 18px 44px -12px rgba(0,0,0,0.7),
-      0 0 38px rgba(74, 222, 128, 0.3),
-      0 0 70px rgba(74, 222, 128, 0.12),
-      0 0 0 1px rgba(74, 222, 128, 0.32),
+      0 0 38px rgba(59, 130, 246, 0.36),
+      0 0 70px rgba(59, 130, 246, 0.16),
+      0 0 0 1px rgba(59, 130, 246, 0.38),
       inset 0 1px 0 rgba(255,255,255,0.08);
   }
 }
@@ -597,7 +630,7 @@ input, textarea { font: inherit; cursor: text; }
   position: absolute;
   inset: -10px;
   border-radius: 50%;
-  border: 1px solid rgba(74, 222, 128, 0.3);
+  border: 1px solid rgba(59, 130, 246, 0.35);
   animation: ring 2.4s infinite;
   pointer-events: none;
 }
@@ -620,8 +653,8 @@ input, textarea { font: inherit; cursor: text; }
   border-color: var(--fg);
 }
 .power-btn-flat.is-running {
-  border-color: var(--ok);
-  color: var(--ok);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 .power-btn-flat.is-running:hover:not(:disabled) {
   background: var(--warn);
@@ -655,12 +688,12 @@ input, textarea { font: inherit; cursor: text; }
     inset 0 0 24px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 .power-btn-neon.is-running {
-  border-color: var(--ok);
-  color: var(--ok);
+  border-color: var(--accent);
+  color: var(--accent);
   box-shadow:
-    0 0 24px var(--ok),
-    0 0 60px rgba(74,222,128,0.35),
-    inset 0 0 22px rgba(74,222,128,0.18);
+    0 0 24px var(--accent),
+    0 0 60px rgba(59,130,246,0.38),
+    inset 0 0 22px rgba(59,130,246,0.22);
   animation: none;
 }
 .power-btn-neon.is-running:hover:not(:disabled) {
@@ -686,11 +719,11 @@ input, textarea { font: inherit; cursor: text; }
   background: linear-gradient(155deg, #ffffff 0%, #c8c8c8 50%, #6a6a6a 100%);
 }
 .power-btn-metallic.is-running {
-  background: linear-gradient(155deg, #d3fce0 0%, #4ade80 50%, #1c5933 100%);
-  color: #0a1a0a;
-  border-color: var(--ok);
+  background: linear-gradient(155deg, #d3e4fc 0%, #3b82f6 50%, #1b3486 100%);
+  color: #0a0f1a;
+  border-color: var(--accent);
   box-shadow:
-    0 18px 40px -10px rgba(74,222,128,0.45),
+    0 18px 40px -10px rgba(59,130,246,0.45),
     inset 0 2px 4px rgba(255,255,255,0.5),
     inset 0 -3px 8px rgba(0,0,0,0.25);
 }

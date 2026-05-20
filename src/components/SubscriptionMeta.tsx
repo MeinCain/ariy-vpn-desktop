@@ -306,9 +306,13 @@ function SubscriptionCard({ sub, isLegacy = false }: SubscriptionCardProps) {
       return { text: t("subMeta.expiresToday"), warn: true };
     }
     const date = new Date(unixSeconds * 1000);
+    // Показываем год всегда: «3 мая 2027 г.» вместо «3 мая» — иначе
+    // пользователь с долгой подпиской не понимает, текущий это год
+    // или следующий, и срабатывает паническая мысль «осталось 3 дня?!».
     const formatter = new Intl.DateTimeFormat(i18n.language, {
       day: "numeric",
       month: "long",
+      year: "numeric",
     });
     return {
       text: t("subMeta.until", { date: formatter.format(date) }),

@@ -1285,6 +1285,16 @@ pub async fn shutdown_helper() -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
+/// Hard fallback для выхода из приложения. Используется фронтом, если
+/// `@tauri-apps/plugin-process exit()` упал/не разрешён (см. App.tsx
+/// `app:quit-requested` handler). Просто завершает текущий процесс —
+/// все child-процессы (sing-box/mihomo, запущенные через shell-plugin)
+/// убиваются вместе с родителем благодаря Windows Job-Object'у Tauri.
+#[tauri::command]
+pub fn force_quit() {
+    std::process::exit(0);
+}
+
 // ─── Connection ping (Settings → пинг) ──────────────────────────────────────
 
 /// Замерить ping заданным методом (TCP / HTTP-GET / HTTP-HEAD).

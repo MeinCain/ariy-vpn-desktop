@@ -917,5 +917,8 @@
       "switchFailedTitle": "failed to switch",
       "testFailedTitle": "test failed"
     }
+  },
+  "currentServer": {
+    "aria": "Current server: {{name}}"
   }
 }

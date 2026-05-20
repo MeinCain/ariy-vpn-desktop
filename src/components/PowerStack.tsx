@@ -13,8 +13,6 @@ export function PowerStack({ canConnect }: { canConnect: boolean }) {
   const { t } = useTranslation();
   const status = useVpnStore((s) => s.status);
   const mode = useVpnStore((s) => s.mode);
-  const socksPort = useVpnStore((s) => s.socksPort);
-  const httpPort = useVpnStore((s) => s.httpPort);
   const socksUsername = useVpnStore((s) => s.socksUsername);
   const socksPassword = useVpnStore((s) => s.socksPassword);
   const connect = useVpnStore((s) => s.connect);
@@ -56,11 +54,9 @@ export function PowerStack({ canConnect }: { canConnect: boolean }) {
         <div className={`power-label ${POWER_LABEL_CLS[status]}`}>
           {t(`status.label.${status}`)}.
         </div>
-        {isRunning && socksPort && (
-          <div className="power-detail" style={{ marginTop: 6 }}>
-            socks5 127.0.0.1:{socksPort} · http :{httpPort}
-          </div>
-        )}
+        {/* socks5/http info-строка под кнопкой убрана — это технический
+            шум для рядового юзера. Поля inbound по-прежнему доступны
+            программно (socksPort/httpPort) для LAN-режима ниже. */}
         {isRunning && socksUsername && socksPassword && (
           <LanCredentials user={socksUsername} pass={socksPassword} />
         )}

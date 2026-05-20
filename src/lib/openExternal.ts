@@ -1,36 +1,27 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useSubscriptionStore } from "../stores/subscriptionStore";
-import { SUPPORT_URL } from "./constants";
+import { DASHBOARD_URL, SUPPORT_URL } from "./constants";
 
-/** Открыть личный кабинет подписки.
+/** Открыть личный кабинет Ariy VPN.
  *
- *  ВАЖНО (изменение поведения): URL берётся ТОЛЬКО из заголовка
- *  `profile-web-page-url`, который провайдер подписки прислал в HTTP-
- *  ответе. Если заголовка нет — функция ничего не делает (no-op).
- *
- *  Захардкоженный fallback (`web.nemefisto.online`) убран:
- *   - универсальный клиент не должен рекламировать конкретного
- *     провайдера;
- *   - для пользователей сторонних подписок ссылка на наш сайт не
- *     релевантна;
- *   - UI должен скрывать кнопку когда `useHasDashboardUrl() === false`. */
+ *  Ariy: ВСЕГДА открываем `cabinet.example.com` — это наш каноничный
+ *  кабинет, привязанный к Telegram-аккаунту и email. Заголовок
+ *  `profile-web-page-url` от Remnawave-подписки игнорируется (он
+ *  приходит как `sub.example.com` — это внутренний sub-домен, не кабинет
+ *  пользователя). */
 export function openDashboard() {
-  const url = useSubscriptionStore.getState().meta?.webPageUrl;
-  if (!url) return;
-  void openUrl(url);
+  void openUrl(DASHBOARD_URL);
 }
 
-/** Hook для условного рендера кнопки «личный кабинет».
- *  Возвращает `true` только если подписка прислала
- *  `profile-web-page-url`. */
+/** Кнопка «личный кабинет» в Ariy показывается всегда — у нас единый
+ *  для всех юзеров кабинет cabinet.example.com. Hook оставлен как
+ *  совместимая no-op заглушка на случай если кто-то его ещё импортирует. */
 export function useHasDashboardUrl(): boolean {
-  return !!useSubscriptionStore((s) => s.meta?.webPageUrl);
+  return true;
 }
 
-/** Открыть страницу поддержки.
- *  Если провайдер прислал `support-url` — используется он;
- *  иначе — захардкоженный SUPPORT_URL (общий бот). */
+/** Открыть страницу поддержки Ariy VPN — наш бот @example_support_bot
+ *  (`SUPPORT_URL` в constants.ts). Заголовок `support-url` от Remnawave
+ *  игнорируется — у Ariy единый канал поддержки. */
 export function openSupport() {
-  const meta = useSubscriptionStore.getState().meta;
-  void openUrl(meta?.supportUrl ?? SUPPORT_URL);
+  void openUrl(SUPPORT_URL);
 }

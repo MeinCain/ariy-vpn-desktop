@@ -17,36 +17,42 @@
 ;   улучшение для самого частого пути (auto-update).
 
 !macro NSIS_HOOK_PREINSTALL
-  DetailPrint "Stopping Nemefisto Helper service before update..."
-  ; sc stop требует SERVICE_STOP rights на сервис. По умолчанию это
-  ; только Administrators/SYSTEM. Без админа просто silently fails —
-  ; не падаем на error.
+  DetailPrint "Stopping Ariy VPN processes before install..."
+  ; 1. Прежде всего убиваем сам main app — если юзер не закрыл прежнюю
+  ;    копию Ariy VPN перед запуском installer'а, sing-box.exe был залочен
+  ;    Tauri-job-object'ом и NSIS не смог бы перезаписать файлы в
+  ;    `%LOCALAPPDATA%\Ariy VPN\`. /T убивает и дочерние процессы.
+  nsExec::ExecToLog 'taskkill /F /T /IM "Ariy VPN.exe"'
+  ; 2. Helper-сервис: останавливаем через SCM (требует админа), потом
+  ;    taskkill как страховка. Без админа sc stop silently fails — но в
+  ;    NSIS installer обычно elevation уже было.
   nsExec::ExecToLog 'sc stop AriyHelper'
-  ; Ждём чтобы SCM успел маршрутизировать STOP-сигнал и helper-процесс
-  ; завершился (закрыл свой image-handle).
   Sleep 1500
-  ; Defensive: если sc stop не помог (например, helper висит и не
-  ; реагирует на SERVICE_CONTROL_STOP), пробуем kill. Тоже требует
-  ; админа на SYSTEM-процесс.
+  ; 3. Имена процессов: пробуем оба варианта — без target-triple суффикса
+  ;    (это финальные имена в production install) и с суффиксом (это имена
+  ;    в dev-сборке Tauri-sidecar). На проде второй вариант — no-op.
+  nsExec::ExecToLog 'taskkill /F /T /IM ariy-helper.exe'
   nsExec::ExecToLog 'taskkill /F /T /IM ariy-helper-x86_64-pc-windows-msvc.exe'
-  ; 0.3.2: VPN-движки (sing-box / mihomo) могут остаться orphan'ами после
-  ; helper-shutdown — kill'им их тоже. Tauri-sidecar запущен под user'ом
-  ; (taskkill работает без админа), SYSTEM-spawned требует админ-прав.
-  ; Frontend disconnect должен был их остановить нормально, это backup.
+  nsExec::ExecToLog 'taskkill /F /T /IM sing-box.exe'
   nsExec::ExecToLog 'taskkill /F /T /IM sing-box-x86_64-pc-windows-msvc.exe'
+  nsExec::ExecToLog 'taskkill /F /T /IM mihomo.exe'
   nsExec::ExecToLog 'taskkill /F /T /IM mihomo-x86_64-pc-windows-msvc.exe'
-  Sleep 500
+  ; Маленькая пауза — kernel освобождает file-handles после exit.
+  Sleep 800
 !macroend
 
 !macro NSIS_HOOK_PREUNINSTALL
-  DetailPrint "Removing Nemefisto Helper service..."
+  DetailPrint "Stopping Ariy VPN processes before uninstall..."
+  nsExec::ExecToLog 'taskkill /F /T /IM "Ariy VPN.exe"'
   nsExec::ExecToLog 'sc stop AriyHelper'
   Sleep 1500
+  nsExec::ExecToLog 'taskkill /F /T /IM ariy-helper.exe'
   nsExec::ExecToLog 'taskkill /F /T /IM ariy-helper-x86_64-pc-windows-msvc.exe'
-  ; 0.3.2: kill VPN-движки если ещё живы
+  nsExec::ExecToLog 'taskkill /F /T /IM sing-box.exe'
   nsExec::ExecToLog 'taskkill /F /T /IM sing-box-x86_64-pc-windows-msvc.exe'
+  nsExec::ExecToLog 'taskkill /F /T /IM mihomo.exe'
   nsExec::ExecToLog 'taskkill /F /T /IM mihomo-x86_64-pc-windows-msvc.exe'
-  Sleep 500
+  Sleep 800
   ; После stop сервис всё ещё зарегистрирован в SCM. При полной
   ; деинсталляции удаляем чтобы не оставлять "висящую" запись.
   nsExec::ExecToLog 'sc delete AriyHelper'

@@ -28,7 +28,3 @@ dist-ssr
 
 # Артефакты сборки helper-сервиса (создаются prepare-bundle.mjs из target/release/)
 src-tauri/binaries/ariy-helper-*.exe
-
-# Personal Claude Code rules � keep local only
-CLAUDE.md
-CLAUDE-*.md

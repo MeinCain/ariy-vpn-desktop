@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -14,15 +14,9 @@ import { useNativeStatusNotify } from "./lib/hooks/useNativeStatusNotify";
 import { initDeepLinks } from "./lib/deepLinks";
 
 import { BackgroundLayers } from "./components/effects/BackgroundLayers";
-// Bundle optimization: Scene3D тащит за собой three.js (~600 КБ gzip).
-// Lazy-load → отдельный chunk загружается только когда основной UI уже
-// показан. BackgroundLayers рисует базовый градиент сразу — пользователь
-// не увидит чёрного экрана пока three.js парсится.
-const Scene3D = lazy(() =>
-  import("./components/effects/Scene3D").then((m) => ({ default: m.Scene3D })),
-);
-// CustomCursor отключён в Ariy — используем системный курсор.
-import { WideAmbient } from "./components/effects/WideAmbient";
+// Scene3D (three.js фигуры) и WideAmbient (декор по бокам ≥1280px)
+// удалены из Ariy — фирстиль чистый dark-navy без 3D-фона.
+// CustomCursor отключён — используем системный курсор.
 import { AnnounceBanner } from "./components/AnnounceBanner";
 import { CrashRecoveryDialog } from "./components/CrashRecoveryDialog";
 import { BackupPreviewModal } from "./components/BackupPreviewModal";
@@ -35,6 +29,7 @@ import { MihomoGroupsInline } from "./components/MihomoGroupsInline";
 import { useBackupModalStore } from "./lib/backup";
 import { Header } from "./components/Header";
 import { PowerStack } from "./components/PowerStack";
+import { CurrentServerPill } from "./components/CurrentServerPill";
 import { Welcome } from "./components/Welcome";
 import { ServerSelector } from "./components/ServerSelector";
 import { BandwidthMeter } from "./components/BandwidthMeter";
@@ -246,13 +241,27 @@ function App() {
     // До этого Rust prevent_close() удерживает окно, чтобы успело отработать.
     let unlistenQuit: (() => void) | undefined;
     void listen("app:quit-requested", async () => {
-      try { await invoke("disconnect"); } catch (e) { console.warn("[quit] disconnect", e); }
-      try { await invoke("shutdown_helper"); } catch (e) { console.warn("[quit] shutdown_helper", e); }
+      // Каждый шаг под жёстким таймаутом — иначе зависший helper или
+      // долгий disconnect не дадут процессу выйти, и юзер увидит «крестик
+      // не работает». 3 сек на disconnect + 2 сек на shutdown_helper —
+      // с большим запасом достаточно для штатного пути, для жёстких
+      // случаев exit(0) всё равно ждать не будет.
+      const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T | null> =>
+        Promise.race([
+          p.then((v) => v as T | null),
+          new Promise<T | null>((res) => setTimeout(() => res(null), ms)),
+        ]);
+      try { await withTimeout(invoke("disconnect"), 3000); } catch (e) { console.warn("[quit] disconnect", e); }
+      try { await withTimeout(invoke("shutdown_helper"), 2000); } catch (e) { console.warn("[quit] shutdown_helper", e); }
       try {
         const { exit } = await import("@tauri-apps/plugin-process");
         await exit(0);
       } catch (e) {
         console.warn("[quit] exit", e);
+        // Hard fallback: если tauri-plugin-process не разрешён или упал —
+        // просим backend выйти через свою команду (см. ipc/commands.rs:
+        // force_quit вызывает std::process::exit(0)).
+        try { await invoke("force_quit"); } catch {}
       }
     }).then((fn) => { unlistenQuit = fn; });
 
@@ -401,10 +410,6 @@ function App() {
   return (
     <>
       <BackgroundLayers />
-      <Suspense fallback={null}>
-        <Scene3D status={status} />
-      </Suspense>
-      <WideAmbient />
 
       <div className="app">
         <div className="frame">
@@ -419,6 +424,11 @@ function App() {
           <div className="main-grid">
             <div className="grid-power">
               <PowerStack canConnect={canConnect} />
+              {/* Плашка «текущий сервер» сразу под power-кнопкой. Видна
+                  ВСЕГДА когда сервер выбран — в т.ч. при свёрнутой
+                  multi-subscription карточке, чтобы юзер мог в любой
+                  момент узнать к чему он подключён. */}
+              <CurrentServerPill />
             </div>
             <div className="grid-servers">
               {servers.length === 0 ? (

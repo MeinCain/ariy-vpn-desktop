@@ -932,5 +932,8 @@
       "switchFailedTitle": "не удалось переключить",
       "testFailedTitle": "тест не удался"
     }
+  },
+  "currentServer": {
+    "aria": "Текущий сервер: {{name}}"
   }
 }
