@@ -456,38 +456,279 @@ input, textarea { font: inherit; cursor: text; }
   padding: 14px 0 8px;
 }
 
-/* Плашка «текущий сервер» — read-only индикатор под power-кнопкой.
-   Видна когда selectedIndex !== null. Подсвечивается brand-blue
-   когда VPN активен (is-active). */
-.current-server-pill {
-  display: inline-flex;
+/* ── SubscriptionStrip — компактная инфо-плашка под Header ──────────
+   Юзер ID/email слева, тариф/трафик/срок второй строкой, gift + close
+   справа. Дизайн копирует Chrome-расширение Ariy. */
+.sub-strip {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
   align-items: center;
   gap: 10px;
-  margin: 10px auto 4px;
-  padding: 8px 14px;
-  border-radius: 999px;
+  margin: 12px 0 8px;
+  padding: 12px 14px;
+  border-radius: 14px;
   border: 1px solid var(--line-strong);
-  background: rgba(8, 11, 22, 0.55);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(8, 11, 22, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.sub-strip-text {
+  min-width: 0;
+}
+.sub-strip-title {
   font-family: var(--display);
-  font-size: 13px;
+  font-weight: 600;
+  font-size: 13.5px;
   color: var(--fg);
-  max-width: 92%;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
-}
-.current-server-pill.is-active {
-  border-color: rgba(59, 130, 246, 0.55);
-  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.18),
-              0 8px 24px -10px rgba(59, 130, 246, 0.35);
-}
-.current-server-pill-name {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 220px;
-  letter-spacing: 0.02em;
 }
+.sub-strip-stats {
+  margin-top: 3px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fg-dim);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  align-items: center;
+}
+.sub-strip-stats .sep { opacity: 0.45; }
+.sub-strip-gift,
+.sub-strip-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+.sub-strip-gift {
+  background: linear-gradient(155deg, #3b82f6 0%, #1b3486 100%);
+  border-color: rgba(59, 130, 246, 0.55);
+  color: #fff;
+}
+.sub-strip-gift:hover { transform: scale(1.05); }
+.sub-strip-close { font-size: 20px; line-height: 1; }
+.sub-strip-close:hover { border-color: var(--warn); color: var(--warn); }
+
+/* ── Status line «Статус: <state>» под power-кнопкой ───────────────── */
+.status-line {
+  font-family: var(--display);
+  font-size: 13px;
+  color: var(--fg-dim);
+  margin-top: 8px;
+  text-align: center;
+}
+.status-line-label { color: var(--fg-dim); }
+.status-line-state { color: var(--fg); font-weight: 600; }
+.status-line-state.is-running { color: var(--accent); }
+.status-line-state.is-busy { color: var(--accent-2); }
+.status-line-state.is-error { color: var(--warn); }
+
+/* ── CurrentServerWidget — большая plate-кнопка с флагом + страной ─── */
+.current-server-widget {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line-strong);
+  background: rgba(8, 11, 22, 0.5);
+  color: var(--fg);
+  cursor: pointer;
+  transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
+  font-family: var(--display);
+  font-size: 14px;
+}
+.current-server-widget:hover:not(:disabled) {
+  border-color: rgba(59, 130, 246, 0.45);
+  background: rgba(59, 130, 246, 0.06);
+}
+.current-server-widget:disabled { opacity: 0.55; cursor: not-allowed; }
+.current-server-widget.is-active {
+  border-color: rgba(59, 130, 246, 0.55);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.18),
+              0 10px 28px -14px rgba(59, 130, 246, 0.35);
+}
+.csw-flag {
+  width: 24px;
+  height: 18px;
+  border-radius: 3px;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.csw-flag-placeholder {
+  display: inline-block;
+  width: 24px;
+  height: 18px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+.csw-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+.csw-empty {
+  flex: 1;
+  color: var(--fg-dim);
+  font-weight: 500;
+}
+.csw-chevron {
+  color: var(--fg-dim);
+  flex-shrink: 0;
+}
+
+/* ── CountryDrawer — bottom-sheet со списком стран ──────────────────── */
+.country-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: drawer-overlay-in 0.2s ease;
+}
+@keyframes drawer-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.country-drawer {
+  width: 100%;
+  max-width: 460px;
+  max-height: 85vh;
+  background: #0a1020;
+  border-top: 1px solid var(--line-strong);
+  border-radius: 18px 18px 0 0;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0 6px;
+  animation: drawer-in 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes drawer-in {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.country-drawer-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 0 auto 10px;
+}
+.country-drawer-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px 14px;
+  border-bottom: 1px solid var(--line-strong);
+}
+.country-drawer-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--fg);
+  flex: 1;
+}
+.country-drawer-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+.country-drawer-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.country-drawer-close:hover { border-color: var(--warn); color: var(--warn); }
+.country-drawer-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 6px 14px;
+}
+.country-drawer-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--fg-dim);
+}
+.country-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 14px;
+  border: none;
+  background: transparent;
+  color: var(--fg);
+  font-family: var(--display);
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 10px;
+  text-align: left;
+  transition: background 0.18s;
+}
+.country-row:hover:not(:disabled) { background: rgba(59, 130, 246, 0.08); }
+.country-row.is-selected {
+  background: rgba(59, 130, 246, 0.14);
+  outline: 1px solid rgba(59, 130, 246, 0.4);
+}
+.country-row:disabled { opacity: 0.5; cursor: not-allowed; }
+.country-row-flag {
+  width: 26px;
+  height: 20px;
+  border-radius: 3px;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.country-row-flag-placeholder { background: rgba(255, 255, 255, 0.08); }
+.country-row-name {
+  flex: 1;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Точка доступности (зелёная/жёлтая/красная) ────────────────────── */
+.avail-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
+}
+.avail-green { background: #22c55e; color: #22c55e; }
+.avail-yellow { background: #facc15; color: #facc15; }
+.avail-red { background: #ef4444; color: #ef4444; }
 
 /* Status pill */
 .status-pill {

@@ -91,12 +91,13 @@
       "error": "ОШИБКА"
     },
     "label": {
-      "stopped": "не подключён",
-      "starting": "подключаемся…",
-      "running": "защищён",
-      "stopping": "отключаемся…",
-      "error": "ошибка"
-    }
+      "stopped": "Готов к подключению",
+      "starting": "Подключение…",
+      "running": "Подключено",
+      "stopping": "Отключение…",
+      "error": "Ошибка"
+    },
+    "line": "Статус: {{status}}"
   },
   "mode": {
     "proxy": "системный прокси",
@@ -934,6 +935,25 @@
     }
   },
   "currentServer": {
-    "aria": "Текущий сервер: {{name}}"
-  }
+    "aria": "Текущий сервер: {{name}}",
+    "pickLocation": "Выбрать локацию"
+  },
+  "countryDrawer": {
+    "title": "Выбери сервер",
+    "count": "{{available}} из {{total}} доступны",
+    "empty": "Список серверов пуст",
+    "close": "Закрыть",
+    "refresh": "Обновить пинг"
+  },
+  "subStrip": {
+    "tariff": "Тариф: {{name}}",
+    "traffic": "Трафик: {{used}}",
+    "trafficOf": "Трафик: {{used}} из {{total}}",
+    "trafficUnlim": "Трафик: ∞",
+    "expiry": "Осталось: {{days}} дн.",
+    "expiryDate": "До: {{date}}",
+    "giftAria": "Подарок: подарить подписку близким",
+    "logoutAria": "Выйти из аккаунта"
+  },
+  "statusLineLabel": "Статус:"
 }

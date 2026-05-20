@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useVpnStore } from "../stores/vpnStore";
 import { PRESET_BUTTON_STYLE } from "../stores/settingsStore";
 import { useEffectiveSettings } from "../lib/hooks/useEffectiveSettings";
-import { POWER_LABEL_CLS, STATUS_PILL_CLS } from "../lib/constants";
+import { POWER_LABEL_CLS } from "../lib/constants";
 import { PowerIcon } from "./icons";
 
 /**
@@ -32,11 +32,9 @@ export function PowerStack({ canConnect }: { canConnect: boolean }) {
 
   return (
     <div className="power-stack">
-      <div className={`status-pill ${STATUS_PILL_CLS[status]}`}>
-        <span className="dot" />
-        <span>{t(`status.pill.${status}`)}</span>
-      </div>
-
+      {/* Старый STATUS_PILL_CLS-pill сверху убран — он дублировал текст
+          под кнопкой и засорял интерфейс. Сейчас одна строка «Статус:
+          <colored-state>» прямо под кнопкой. */}
       <button
         type="button"
         className={`power-btn power-btn-${effectiveButtonStyle}${isRunning ? " is-running" : ""}`}
@@ -51,12 +49,12 @@ export function PowerStack({ canConnect }: { canConnect: boolean }) {
       </button>
 
       <div style={{ textAlign: "center" }}>
-        <div className={`power-label ${POWER_LABEL_CLS[status]}`}>
-          {t(`status.label.${status}`)}.
+        <div className="status-line">
+          <span className="status-line-label">{t("statusLineLabel", "Статус:")}</span>{" "}
+          <span className={`status-line-state ${POWER_LABEL_CLS[status]}`}>
+            {t(`status.label.${status}`)}
+          </span>
         </div>
-        {/* socks5/http info-строка под кнопкой убрана — это технический
-            шум для рядового юзера. Поля inbound по-прежнему доступны
-            программно (socksPort/httpPort) для LAN-режима ниже. */}
         {isRunning && socksUsername && socksPassword && (
           <LanCredentials user={socksUsername} pass={socksPassword} />
         )}

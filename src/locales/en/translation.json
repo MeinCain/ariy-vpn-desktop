@@ -91,12 +91,13 @@
       "error": "ERROR"
     },
     "label": {
-      "stopped": "not connected",
-      "starting": "connecting…",
-      "running": "protected",
-      "stopping": "disconnecting…",
-      "error": "error"
-    }
+      "stopped": "Ready to connect",
+      "starting": "Connecting…",
+      "running": "Connected",
+      "stopping": "Disconnecting…",
+      "error": "Error"
+    },
+    "line": "Status: {{status}}"
   },
   "mode": {
     "proxy": "system proxy",
@@ -919,6 +920,25 @@
     }
   },
   "currentServer": {
-    "aria": "Current server: {{name}}"
-  }
+    "aria": "Current server: {{name}}",
+    "pickLocation": "Pick location"
+  },
+  "countryDrawer": {
+    "title": "Pick server",
+    "count": "{{available}} of {{total}} available",
+    "empty": "Server list is empty",
+    "close": "Close",
+    "refresh": "Refresh ping"
+  },
+  "subStrip": {
+    "tariff": "Plan: {{name}}",
+    "traffic": "Traffic: {{used}}",
+    "trafficOf": "Traffic: {{used}} of {{total}}",
+    "trafficUnlim": "Traffic: ∞",
+    "expiry": "{{days}} days left",
+    "expiryDate": "Until: {{date}}",
+    "giftAria": "Gift: gift subscription to a friend",
+    "logoutAria": "Sign out"
+  },
+  "statusLineLabel": "Status:"
 }

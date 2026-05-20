@@ -25,21 +25,19 @@ import {
   OnboardingTour,
   isOnboardingCompleted,
 } from "./components/OnboardingTour";
-import { MihomoGroupsInline } from "./components/MihomoGroupsInline";
 import { useBackupModalStore } from "./lib/backup";
 import { Header } from "./components/Header";
 import { PowerStack } from "./components/PowerStack";
-import { CurrentServerPill } from "./components/CurrentServerPill";
+import { CurrentServerWidget } from "./components/CurrentServerWidget";
+import { CountryDrawer } from "./components/CountryDrawer";
+import { SubscriptionStrip } from "./components/SubscriptionStrip";
 import { Welcome } from "./components/Welcome";
-import { ServerSelector } from "./components/ServerSelector";
 import { BandwidthMeter } from "./components/BandwidthMeter";
-import { SubscriptionMeta } from "./components/SubscriptionMeta";
 import { Toaster } from "./components/Toaster";
 import { runLeakTest } from "./lib/leakTest";
 import { ModeSegment } from "./components/ModeSegment";
 import { Footer } from "./components/Footer";
 import { SettingsPage } from "./components/SettingsPage";
-import { openDashboard, useHasDashboardUrl } from "./lib/openExternal";
 
 /**
  * Корневой компонент. Координирует:
@@ -70,11 +68,6 @@ function App() {
   const loadDeviceHwid = useSubscriptionStore((s) => s.loadDeviceHwid);
   const loadSecureCreds = useSubscriptionStore((s) => s.loadSecureCreds);
   const pingAll = useSubscriptionStore((s) => s.pingAll);
-  // 0.3.0: subscriptions.length > 0 ⇒ multi-state активен, server-list
-  // живёт внутри карточек подписок, глобальный ServerSelector прячем.
-  const hasSubscriptionState = useSubscriptionStore(
-    (s) => s.subscriptions.length > 0
-  );
 
   // Settings
   const refreshOnOpen = useSettingsStore((x) => x.refreshOnOpen);
@@ -89,22 +82,11 @@ function App() {
   const autoLeakTest = useSettingsStore((x) => x.autoLeakTest);
   const tunOnlyStrict = useSettingsStore((x) => x.tunOnlyStrict);
   const setSetting = useSettingsStore((x) => x.set);
-  // Кнопка «личный кабинет» показывается только когда подписка
-  // прислала `profile-web-page-url` (захардкоженный fallback убран).
-  const hasDashboardUrl = useHasDashboardUrl();
-  const engine = useSettingsStore((x) => x.engine);
-  const selectedServer =
-    selectedIndex !== null ? servers[selectedIndex] : null;
-  // 8.F (UI v2): mihomo-профиль рендерится не как одна-карточка-«профиль»
-  // в ServerSelector, а как inline-сетка прокси-групп через
-  // MihomoGroupsInline (страновые карточки, FlClash-style). Когда true —
-  // ServerSelector скрываем (синтетическая запись «Профиль Mihomo»
-  // одинокая в списке смысла не несёт).
-  const showMihomoGroups =
-    engine === "mihomo" && selectedServer?.protocol === "mihomo-profile";
   const socksPort = useVpnStore((s) => s.socksPort);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const hasSubscription = servers.length > 0;
 
   // Применяем активную тему (data-theme на <html>). См. App.css :root[data-theme="light"].
   useApplyTheme();
@@ -416,52 +398,32 @@ function App() {
           <AnnounceBanner />
           <Header onOpenSettings={() => setSettingsOpen(true)} />
 
-          {/* main-grid:
-              - на узких — flex column в порядке
-                power → servers/welcome → error → mode-seg;
-              - на широких (≥1024px) — две колонки через grid-template-areas:
-                слева power+mode, справа постоянно открытый server-list. */}
+          {/* SubscriptionStrip: компактная плашка с тарифом / трафиком /
+              сроком + gift / × прямо под шапкой. Видна только когда у
+              юзера есть подписка (servers.length > 0). */}
+          {hasSubscription && <SubscriptionStrip />}
+
           <div className="main-grid">
             <div className="grid-power">
               <PowerStack canConnect={canConnect} />
-              {/* Плашка «текущий сервер» сразу под power-кнопкой. Видна
-                  ВСЕГДА когда сервер выбран — в т.ч. при свёрнутой
-                  multi-subscription карточке, чтобы юзер мог в любой
-                  момент узнать к чему он подключён. */}
-              <CurrentServerPill />
             </div>
             <div className="grid-servers">
-              {servers.length === 0 ? (
-                <Welcome />
-              ) : (
+              {hasSubscription ? (
                 <>
-                  <SubscriptionMeta />
-                  {/* 0.3.0: server-list теперь внутри каждой карточки
-                      подписки (раскрывается chevron'ом). Глобальный
-                      ServerSelector скрываем когда multi-subscription
-                      state активен (subscriptions.length > 0); legacy
-                      single-sub без миграции — оставляем pill+drawer
-                      для backward compat. mihomo-profile — отдельный
-                      MihomoGroupsInline без изменений. */}
-                  {!showMihomoGroups && !hasSubscriptionState && (
-                    <ServerSelector />
-                  )}
-                  {showMihomoGroups && !hasSubscriptionState && (
-                    <MihomoGroupsInline />
-                  )}
+                  {/* Большой server-widget на месте бывшей subscription-
+                      карточки. Клик → CountryDrawer снизу со списком стран
+                      + флагами + цветными точками доступности. */}
+                  <CurrentServerWidget onPick={() => setDrawerOpen(true)} />
                   <BandwidthMeter />
                 </>
+              ) : (
+                <Welcome />
               )}
             </div>
             {errorMessage && (
               <pre className="hero-error grid-error">{errorMessage}</pre>
             )}
-            {/* ModeSegment скрыт пока подписка не добавлена — переключать
-                режим прокси/tun без серверов смысла нет, и Welcome card
-                с инструкцией читается чище без лишних элементов. 13.R:
-                при tunOnlyStrict выбор режима прячем — работает только
-                TUN, useEffect выше уже гарантирует mode === "tun". */}
-            {servers.length > 0 && !tunOnlyStrict && (
+            {hasSubscription && !tunOnlyStrict && (
               <div className="grid-mode">
                 <ModeSegment
                   mode={mode}
@@ -472,25 +434,14 @@ function App() {
             )}
           </div>
 
-          {/* Быстрый доступ в личный кабинет с главного экрана.
-              Скрываем когда:
-                - показан Welcome (там своя кнопка),
-                - подписка не прислала `profile-web-page-url` (нет URL —
-                  нет кнопки, см. openExternal.ts). */}
-          {servers.length > 0 && hasDashboardUrl && (
-            <button
-              type="button"
-              onClick={openDashboard}
-              className="dashboard-link"
-            >
-              <span>{t("header.dashboard")}</span>
-              <span className="dashboard-link-arrow">→</span>
-            </button>
-          )}
-
           <Footer />
         </div>
       </div>
+
+      <CountryDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+      />
 
       {settingsOpen && (
         <SettingsPage onClose={() => setSettingsOpen(false)} />
