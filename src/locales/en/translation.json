@@ -278,7 +278,7 @@
     },
     "vpnConflict": {
       "title": "VPN conflict",
-      "message": "active VPN on interface: {{list}}.\nDisconnect it before connecting."
+      "message": "Detected an active VPN interface in the system: {{list}}.\nWe'll try anyway — if something's off, disconnect the other VPN."
     }
   },
   "notification": {

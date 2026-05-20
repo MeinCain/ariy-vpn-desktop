@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useSubscriptionStore } from "../stores/subscriptionStore";
 import { useAuthStore } from "../stores/authStore";
-import { buildSubUrl } from "../lib/ariy-api";
 import { DASHBOARD_URL } from "../lib/constants";
 
 /**
@@ -44,26 +43,27 @@ export function Welcome() {
   const [dragActive, setDragActive] = useState(false);
   const lastSessionToken = useRef<string | null>(null);
 
-  // После того как сессия появилась (любой login прошёл) — кидаем sub_url в существующий subscriptionStore.
+  // После того как сессия появилась — показываем юзеру что логин прошёл.
+  // backend endpoint `GET /v1/sub/:token` пока не задеплоен, поэтому
+  // автоматически подписку фетчить не можем — юзеру говорим явно
+  // (toast через emailError, который рендерится в форме).
   useEffect(() => {
     if (sessionToken && sessionToken !== lastSessionToken.current) {
       lastSessionToken.current = sessionToken;
-      setSubUrl(buildSubUrl(sessionToken));
-      void fetchSubscription();
+      console.log("[Welcome] login OK, session_token saved. End-to-end depends on backend /v1/sub/:token (TBD).");
+      setEmailError("Вы вошли. Скачивание подписки ещё не активно (backend endpoint в разработке) — пока используйте «Использовать ссылку подписки».");
     }
-  }, [sessionToken, setSubUrl, fetchSubscription]);
+  }, [sessionToken]);
 
   const onClickTelegram = async () => {
     if (tg) {
-      // Уже идёт — re-open deep-link на случай если юзер не успел
-      void openUrl(tg.deepLink).catch(() => {});
+      void openUrl(tg.loginUrl).catch(() => {});
       return;
     }
     const res = await startTg();
     if (res.ok) {
-      // Открыли deep-link сразу после успешного request
       const fresh = useAuthStore.getState().tg;
-      if (fresh) void openUrl(fresh.deepLink).catch(() => {});
+      if (fresh) void openUrl(fresh.loginUrl).catch(() => {});
     } else {
       setEmailError(res.message);
     }
@@ -124,7 +124,7 @@ export function Welcome() {
         <div className="ariy-tg-pending">
           <p className="ariy-tg-pending-title">{t("welcome.login.tgPending")}</p>
           <p className="ariy-tg-pending-hint">{t("welcome.login.tgPendingHint")}</p>
-          <button type="button" className="ariy-cta ariy-cta-secondary" onClick={() => openUrl(tg.deepLink).catch(() => {})}>
+          <button type="button" className="ariy-cta ariy-cta-secondary" onClick={() => openUrl(tg.loginUrl).catch(() => {})}>
             {t("welcome.login.tgReopen")}
           </button>
           <button type="button" className="ariy-link-btn" onClick={cancelTg}>

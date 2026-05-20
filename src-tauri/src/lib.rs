@@ -161,17 +161,25 @@ pub fn run() {
             .build()?;
             Ok(())
         })
-        // 13.A: закрытие главного окна → сворачиваем в трей, не выходим
-        // из приложения. Outright выход возможен только через пункт
-        // «Выйти» в меню трея — там же делается полный shutdown.
-        // 13.O: закрытие floating-окна (×) → скрываем и эмитим
-        // `floating-closed` чтобы фронт сбросил `settings.floatingWindow`.
+        // Закрытие окон:
+        // - **main** (× на главном окне): полный выход с cleanup VPN.
+        //   Пользователи Ariy ожидают что при закрытии — VPN отключается
+        //   и все процессы (sing-box, mihomo, WFP, TUN) убиваются.
+        //   Эмитим `app:quit-requested` в фронт; App.tsx ловит, делает
+        //   `invoke('disconnect') + invoke('shutdown_helper') + exit(0)`
+        //   через tauri-plugin-process. До этого момента `api.prevent_close()`
+        //   удерживает окно открытым, чтобы Rust успел дочистить ресурсы.
+        // - **floating**: только скрываем (X на мини-окне — это «свернуть»).
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                let _ = window.hide();
                 if window.label() == "floating" {
+                    api.prevent_close();
+                    let _ = window.hide();
                     let _ = window.app_handle().emit("floating-closed", ());
+                } else {
+                    // main window — full quit с cleanup
+                    api.prevent_close();
+                    let _ = window.app_handle().emit("app:quit-requested", ());
                 }
             }
         })

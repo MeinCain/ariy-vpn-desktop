@@ -256,19 +256,28 @@ export const useVpnStore = create<VpnState>((set, get) => ({
     if (selectedIndex === null) return;
 
     // 9.C: проверяем routing-таблицу на чужие default/half-default
-    // маршруты до запуска connect. Если такие есть — это другой
-    // активный VPN, и наш TUN/прокси конфликтует с ним. Не запускаем.
+    // маршруты до запуска connect. Если такие есть — другой VPN
+    // (или orphan-адаптер от упавшего клиента). Показываем
+    // предупреждение **один раз за сессию** (dedupe через
+    // sessionStorage) но connect больше не блокируем — юзер сам
+    // решает, продолжать или нет. Жёсткая блокировка раздражала
+    // когда orphan-адаптер от Nemefisto оставался в системе после
+    // его crash'а.
     try {
       const conflicts = await invoke<string[]>("check_routing_conflicts");
       if (Array.isArray(conflicts) && conflicts.length > 0) {
         const list = conflicts.join(", ");
-        showToast({
-          kind: "warning",
-          title: i18n.t("vpnStore.vpnConflict.title"),
-          message: i18n.t("vpnStore.vpnConflict.message", { list }),
-          durationMs: 8000,
-        });
-        return;
+        const dedupKey = "ariy.vpnConflictShownFor:" + list;
+        if (!sessionStorage.getItem(dedupKey)) {
+          sessionStorage.setItem(dedupKey, "1");
+          showToast({
+            kind: "warning",
+            title: i18n.t("vpnStore.vpnConflict.title"),
+            message: i18n.t("vpnStore.vpnConflict.message", { list }),
+            durationMs: 6000,
+          });
+        }
+        // НЕ блокируем connect — даём юзеру попробовать.
       }
     } catch {
       // Не критично: detect best-effort, не должен блокировать connect

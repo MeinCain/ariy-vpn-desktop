@@ -239,11 +239,29 @@ function App() {
       unlistenTray = fn;
     });
 
+    // Закрытие главного окна → юзер хочет выйти. Чистим VPN полностью:
+    // 1. disconnect — Rust убивает sing-box/mihomo, helper снимает WFP и TUN
+    // 2. shutdown_helper — просим SYSTEM-service выйти грациозно
+    // 3. exit(0) — закрываем app целиком
+    // До этого Rust prevent_close() удерживает окно, чтобы успело отработать.
+    let unlistenQuit: (() => void) | undefined;
+    void listen("app:quit-requested", async () => {
+      try { await invoke("disconnect"); } catch (e) { console.warn("[quit] disconnect", e); }
+      try { await invoke("shutdown_helper"); } catch (e) { console.warn("[quit] shutdown_helper", e); }
+      try {
+        const { exit } = await import("@tauri-apps/plugin-process");
+        await exit(0);
+      } catch (e) {
+        console.warn("[quit] exit", e);
+      }
+    }).then((fn) => { unlistenQuit = fn; });
+
     return () => {
       unlisten?.();
       unlistenNetwork?.();
       unlistenTray?.();
       unlistenFloat?.();
+      unlistenQuit?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // только один раз на mount
