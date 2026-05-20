@@ -1,5 +1,4 @@
 import { useEffect, useMemo } from "react";
-import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useVpnStore } from "../stores/vpnStore";
 import { useSubscriptionStore } from "../stores/subscriptionStore";
@@ -64,7 +63,10 @@ export function CountryDrawer({ open, onClose }: Props) {
     [servers]
   );
 
-  return createPortal(
+  // Без createPortal — в production-сборке Tauri WebView2 portal к
+  // document.body иногда не монтируется (юзер видел «пустую страницу»
+  // в beta.14/.15/.16). Рендерим overlay прямо в parent React-tree.
+  return (
     <div
       className="country-drawer-overlay"
       role="dialog"
@@ -145,7 +147,6 @@ export function CountryDrawer({ open, onClose }: Props) {
           })}
         </div>
       </div>
-    </div>,
-    document.body
+    </div>
   );
 }

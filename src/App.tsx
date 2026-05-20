@@ -127,6 +127,10 @@ function App() {
     // Этап 6.A: подтягиваем URL/HWID из Windows Credential Manager
     // (с миграцией из localStorage при первом запуске). Делаем до
     // refreshOnOpen, чтобы fetchSubscription использовал актуальный URL.
+    // На mount подтягиваем plan/email/telegram_id из /v1/auth/me в
+    // authStore. Без этого SubscriptionStrip не показывал «Тариф: VIP»
+    // — план хранится только в cabinet, не в подписке Remnawave.
+    void useAuthStore.getState().loadMe().catch(() => {});
     void loadSecureCreds().then(async () => {
       // Auto-recovery: если у юзера есть валидный session_token, но
       // sub_url в Credential Manager пустой (например, после обновления

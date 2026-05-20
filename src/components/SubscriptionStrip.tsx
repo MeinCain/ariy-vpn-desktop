@@ -27,10 +27,18 @@ export function SubscriptionStrip() {
   const removeSubscription = useSubscriptionStore((s) => s.removeSubscription);
   const sessionToken = useAuthStore((s) => s.sessionToken);
   const logout = useAuthStore((s) => s.logout);
+  const authEmail = useAuthStore((s) => s.email);
+  const authTelegramId = useAuthStore((s) => s.telegramId);
+  const authPlan = useAuthStore((s) => s.plan);
 
-  // Title для левой части: meta.title (приходит из подписки Remnawave —
-  // обычно `user_<telegram_id>` или email), fallback на host из sub-URL.
+  // Title для левой части: предпочитаем authStore (email / user_<tg_id>),
+  // иначе meta.title из подписки Remnawave, fallback на host из sub-URL.
+  // Берём meta.title только если authStore ничего не вернул — у Remnawave
+  // в title часто пишут «Ariy VPN 24/7» (название сервиса, а не юзера),
+  // и юзер прямо жаловался что видит это в шапке.
   const displayTitle = (() => {
+    if (authEmail) return authEmail;
+    if (authTelegramId) return `user_${authTelegramId}`;
     if (meta?.title) return meta.title;
     try {
       const url = legacyUrl || subscriptions[0]?.url;
@@ -55,10 +63,11 @@ export function SubscriptionStrip() {
     return Math.round(b) + " B";
   };
 
-  // Тариф: тут пока используем meta.title — на бэке Remnawave plan-name
-  // не всегда отдельно. Если title содержит «VIP/Premium/...» в имени —
-  // берём; иначе fallback на title целиком. Юзер увидит что есть.
-  const tariff = meta?.title?.replace(/^user_\d+\s*/i, "").trim() || "Standard";
+  // Тариф из cabinet: `authStore.plan` подгружается из /v1/auth/me на
+  // mount'е (beta.13). Если cabinet вернул что-то — показываем; иначе
+  // скрываем блок «Тариф:» вообще, чтобы не падать на «Ariy VPN 24/7»
+  // (это название сервиса в `meta.title`, а не имя тарифа).
+  const tariff = authPlan?.trim() || null;
 
   const expiryText = (() => {
     if (!expireAt) return null;
@@ -108,8 +117,12 @@ export function SubscriptionStrip() {
       <div className="sub-strip-text">
         <div className="sub-strip-title">{displayTitle}</div>
         <div className="sub-strip-stats">
-          <span>{t("subStrip.tariff", { name: tariff })}</span>
-          <span className="sep">·</span>
+          {tariff && (
+            <>
+              <span>{t("subStrip.tariff", { name: tariff })}</span>
+              <span className="sep">·</span>
+            </>
+          )}
           <span>{trafficText}</span>
           {expiryText && (
             <>

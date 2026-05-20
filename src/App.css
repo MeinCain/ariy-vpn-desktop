@@ -3406,7 +3406,7 @@ input, textarea { font: inherit; cursor: text; }
   color: var(--fg);
   font-family: var(--display);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
 }
