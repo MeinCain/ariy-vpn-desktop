@@ -556,7 +556,7 @@ pub async fn connect(
             let interface_name = if tun_masking.unwrap_or(false) {
                 generate_masked_tun_name()
             } else {
-                format!("nemefisto-{}", std::process::id())
+                format!("ariy-{}", std::process::id())
             };
             Some(sing_box_config::TunOptions {
                 interface_name,
@@ -1194,7 +1194,7 @@ pub async fn recover_network() -> RecoveryReport {
 ///   (`127.0.0.1:port` где port в нашем диапазоне);
 /// - `proxy_backup_present` — есть `proxy_backup.json` от прошлого
 ///   `set_system_proxy`, можно сделать restore;
-/// - `tun_orphan` — есть адаптер с префиксом `nemefisto-` (helper
+/// - `tun_orphan` — есть адаптер с префиксом `ariy-` (helper
 ///   обычно их сам чистит при старте, но если helper-сервис не
 ///   запущен — остаются).
 ///
@@ -1598,7 +1598,7 @@ pub async fn ping_servers(
 /// - `recovery-state.json` — текущее состояние orphan-ресурсов;
 /// - `proxy-backup.json` — сохранённый backup системного прокси (если есть).
 ///
-/// Сохраняется в `%USERPROFILE%\Documents\nemefisto-diagnostics-<timestamp>.zip`.
+/// Сохраняется в `%USERPROFILE%\Documents\ariy-diagnostics-<timestamp>.zip`.
 /// Возвращает абсолютный путь — UI показывает в toast с кнопкой
 /// «открыть папку» через `tauri-plugin-opener::reveal_item_in_dir`.
 #[tauri::command]
@@ -1618,7 +1618,7 @@ pub fn export_diagnostics() -> Result<String, String> {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
-    let zip_path = docs.join(format!("nemefisto-diagnostics-{ts}.zip"));
+    let zip_path = docs.join(format!("ariy-diagnostics-{ts}.zip"));
 
     let file = std::fs::File::create(&zip_path).map_err(|e| e.to_string())?;
     let mut zip = zip::ZipWriter::new(file);
@@ -1811,7 +1811,7 @@ pub async fn mihomo_delay_test(
 
 // ─── 12.D — backup/restore настроек ─────────────────────────────────────────
 
-/// Записать backup-JSON в `%USERPROFILE%\Documents\nemefisto-backup-<ts>.json`.
+/// Записать backup-JSON в `%USERPROFILE%\Documents\ariy-backup-<ts>.json`.
 ///
 /// Frontend сам собирает JSON (с whitelist'ом полей и `schema_version`),
 /// мы лишь сохраняем файл — нет смысла дублировать сериализацию настроек
@@ -1836,7 +1836,7 @@ pub fn export_settings_to_documents(json: String) -> Result<String, String> {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
-    let path = docs.join(format!("nemefisto-backup-{ts}.json"));
+    let path = docs.join(format!("ariy-backup-{ts}.json"));
     std::fs::write(&path, json.as_bytes()).map_err(|e| e.to_string())?;
     Ok(path.to_string_lossy().into_owned())
 }

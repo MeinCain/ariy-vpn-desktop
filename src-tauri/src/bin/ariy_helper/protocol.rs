@@ -138,7 +138,7 @@ pub enum Request {
     /// сейчас не имеет активного kill-switch state, удалит всё что
     /// потенциально зависло от прошлых сессий.
     KillSwitchForceCleanup,
-    /// Cleanup orphan TUN-адаптеров (`nemefisto-*`) и half-default
+    /// Cleanup orphan TUN-адаптеров (`ariy-*`) и half-default
     /// routes через `198.18.0.1`. Используется UI-кнопкой
     /// «восстановить сеть» когда видимо, что что-то осталось от
     /// упавшей сессии. Безопасно вызывать только когда VPN не активен.

@@ -280,10 +280,10 @@ html, body, #root {
 }
 body {
   overflow-x: hidden;
-  cursor: none;
+  cursor: pointer;
 }
-a { color: inherit; text-decoration: none; cursor: none; }
-button { font: inherit; color: inherit; background: none; border: 0; cursor: none; }
+a { color: inherit; text-decoration: none; cursor: pointer; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
 input, textarea { font: inherit; cursor: text; }
 
 @media (hover: none), (pointer: coarse) {
@@ -506,7 +506,7 @@ input, textarea { font: inherit; cursor: text; }
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.22em;
-  cursor: none;
+  cursor: pointer;
   user-select: none;
   border: 1px solid var(--line-strong);
   background: transparent;
@@ -780,7 +780,7 @@ input, textarea { font: inherit; cursor: text; }
   border: 1px solid transparent;
   border-radius: 999px;
   background: transparent;
-  cursor: none;
+  cursor: pointer;
   transition: color 0.15s, background 0.15s, border-color 0.15s;
 }
 .sub-meta-expand-btn:hover,
@@ -837,7 +837,7 @@ input, textarea { font: inherit; cursor: text; }
   background: transparent;
   color: var(--fg);
   font-size: 13px;
-  cursor: none;
+  cursor: pointer;
   transition: background 0.12s, border-color 0.12s;
   text-align: left;
 }
@@ -971,7 +971,7 @@ input, textarea { font: inherit; cursor: text; }
   border: 1px solid transparent;
   border-radius: 999px;
   background: transparent;
-  cursor: none;
+  cursor: pointer;
   transition: color 0.15s, background 0.15s, border-color 0.15s;
 }
 .sub-meta-menu-btn:hover,
@@ -1012,7 +1012,7 @@ input, textarea { font: inherit; cursor: text; }
   font-size: 12px;
   text-align: left;
   color: var(--fg);
-  cursor: none;
+  cursor: pointer;
   transition: background 0.12s, color 0.12s;
 }
 .sub-meta-menu-item:hover {
@@ -1082,7 +1082,7 @@ input, textarea { font: inherit; cursor: text; }
   background: transparent;
   color: var(--fg-dim);
   font-size: 12px;
-  cursor: none;
+  cursor: pointer;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 .sub-meta-add-btn:hover {
@@ -1121,7 +1121,7 @@ input, textarea { font: inherit; cursor: text; }
   background: var(--bg-glass);
   color: var(--fg);
   font-size: 12px;
-  cursor: none;
+  cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
 }
 .sub-meta-add-confirm:hover:not(:disabled) {
@@ -1198,7 +1198,7 @@ input, textarea { font: inherit; cursor: text; }
   border-radius: 999px;
   font-size: 12px;
   font-weight: 500;
-  cursor: none;
+  cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 .sub-meta-confirm-cancel {
@@ -1237,7 +1237,7 @@ input, textarea { font: inherit; cursor: text; }
   font-size: 10px;
   letter-spacing: 0.06em;
   text-transform: lowercase;
-  cursor: none;
+  cursor: pointer;
   white-space: nowrap;
   transition: background 0.15s, color 0.15s;
 }
@@ -1270,7 +1270,7 @@ input, textarea { font: inherit; cursor: text; }
   color: var(--fg);
   font-family: var(--mono, ui-monospace, monospace);
   font-size: 11px;
-  cursor: none;
+  cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
 }
 :root[data-theme="light"] .lan-creds-row,
@@ -1374,7 +1374,7 @@ input, textarea { font: inherit; cursor: text; }
   color: var(--bg);
   font-size: 12px;
   letter-spacing: 0.04em;
-  cursor: none;
+  cursor: pointer;
   transition: opacity 0.15s, transform 0.1s;
 }
 .btn-primary:hover:not(:disabled) {
@@ -1418,7 +1418,7 @@ input, textarea { font: inherit; cursor: text; }
   color: var(--fg);
   font-size: 12px;
   letter-spacing: 0.02em;
-  cursor: none;
+  cursor: pointer;
   text-align: left;
   min-width: 0;
 }
@@ -1458,7 +1458,7 @@ input, textarea { font: inherit; cursor: text; }
   color: var(--fg-dim);
   font-size: 18px;
   line-height: 1;
-  cursor: none;
+  cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
 .announce-banner-close:hover {
@@ -1571,7 +1571,7 @@ input, textarea { font: inherit; cursor: text; }
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   color: var(--fg);
-  cursor: none;
+  cursor: pointer;
   transition: border-color 0.2s, background 0.2s, transform 0.15s;
   width: 100%;
   text-align: left;
@@ -1943,7 +1943,7 @@ input, textarea { font: inherit; cursor: text; }
   align-items: center;
   gap: 10px;
   border-bottom: 1px solid var(--line);
-  cursor: none;
+  cursor: pointer;
   transition: background 0.2s;
   /* ВАЖНО: default state — opacity 1, никаких transforms. Если animation
      по какой-то причине не запустится (свернутый grid, оптимизации
@@ -2183,7 +2183,7 @@ input, textarea { font: inherit; cursor: text; }
   background: var(--bg-glass);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
-  cursor: none;
+  cursor: pointer;
   text-align: left;
   width: 100%;
   font: inherit;
@@ -3010,7 +3010,7 @@ input, textarea { font: inherit; cursor: text; }
   text-transform: uppercase;
   letter-spacing: 0.18em;
   color: var(--fg-dim);
-  cursor: none;
+  cursor: pointer;
   transition: color 0.2s, border-color 0.2s, background 0.2s, transform 0.15s;
 }
 .dashboard-link:hover {
@@ -3148,7 +3148,7 @@ input, textarea { font: inherit; cursor: text; }
   transition: background 0.2s;
   flex-shrink: 0;
   padding: 0;
-  cursor: none;
+  cursor: pointer;
 }
 .toggle.is-on { background: var(--fg); }
 .toggle-knob {
@@ -3179,7 +3179,7 @@ input, textarea { font: inherit; cursor: text; }
   color: var(--fg);
   text-transform: lowercase;
   outline: none;
-  cursor: none;
+  cursor: pointer;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'><path fill='%239d9d99' d='M0 0h8L4 5z'/></svg>");
@@ -3217,7 +3217,7 @@ input, textarea { font: inherit; cursor: text; }
   color: var(--warn);
   background: transparent;
   transition: background 0.2s, color 0.2s, transform 0.15s;
-  cursor: none;
+  cursor: pointer;
 }
 .btn-danger:hover:not(:disabled) {
   background: var(--warn);
@@ -3237,7 +3237,7 @@ input, textarea { font: inherit; cursor: text; }
   padding: 6px 0;
   text-align: left;
   align-self: flex-start;
-  cursor: none;
+  cursor: pointer;
   transition: color 0.2s;
 }
 .advanced-toggle:hover { color: var(--fg); }
@@ -3308,7 +3308,7 @@ input, textarea { font: inherit; cursor: text; }
   transition: border-color 0.2s;
   align-self: start;
   justify-self: start;
-  cursor: none;
+  cursor: pointer;
 }
 .about-link:hover { border-color: var(--fg); }
 
@@ -3380,7 +3380,7 @@ input, textarea { font: inherit; cursor: text; }
   border: 0;
   padding: 6px 0;
   transition: color 0.2s;
-  cursor: none;
+  cursor: pointer;
 }
 .back-btn:hover { color: var(--fg); }
 .settings-title {
@@ -3457,7 +3457,7 @@ input, textarea { font: inherit; cursor: text; }
   align-items: center;
   gap: 12px;
   padding: 10px 0;
-  cursor: none;
+  cursor: pointer;
   font-family: var(--display);
   font-weight: 500;
   font-size: 14px;
@@ -3474,7 +3474,7 @@ input, textarea { font: inherit; cursor: text; }
   border-radius: 50%;
   border: 1px solid var(--line-strong);
   background: var(--bg-glass);
-  cursor: none;
+  cursor: pointer;
   position: relative;
   flex-shrink: 0;
   transition: border-color 0.2s;
@@ -3542,9 +3542,176 @@ input, textarea { font: inherit; cursor: text; }
   letter-spacing: -0.01em;
   text-transform: lowercase;
   color: var(--fg-mute);
-  cursor: none;
+  cursor: pointer;
   text-align: left;
   transition: color 0.15s;
 }
 .link-btn:hover { color: var(--fg); text-decoration: underline; }
 .link-btn:focus-visible { outline: 1px dashed var(--fg-mute); outline-offset: 2px; }
+
+/* ─────────────────────────────────────────────────────────────────────
+   Ariy Welcome — стиль по дизайну example.com
+   Hero-логотип + TG-CTA + список ссылок. Тёмно-синий фон, brand-blue
+   градиент на главной кнопке.
+   ───────────────────────────────────────────────────────────────────── */
+.ariy-welcome {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px 26px 28px;
+  text-align: center;
+  align-items: stretch;
+}
+.ariy-hero { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 8px; }
+.ariy-hero-logo {
+  width: 108px;
+  height: 108px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ariy-hero-logo::before {
+  content: "";
+  position: absolute;
+  inset: -28px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(53, 120, 245, 0.45), rgba(27, 52, 134, 0.1) 60%, transparent 80%);
+  filter: blur(8px);
+  z-index: -1;
+}
+.ariy-hero-logo img {
+  width: 100%; height: 100%; object-fit: contain;
+  filter: drop-shadow(0 6px 18px rgba(53, 120, 245, 0.35));
+}
+.ariy-hero-title {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+  margin: 4px 0 0;
+}
+.ariy-hero-subtitle {
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: rgba(170, 181, 207, 0.85);
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+.ariy-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 22px;
+  border-radius: 14px;
+  border: none;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.005em;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.2s, filter 0.2s;
+  color: #fff;
+}
+.ariy-cta:disabled { opacity: 0.55; cursor: not-allowed; }
+.ariy-cta:not(:disabled):hover { transform: translateY(-1px); }
+.ariy-cta:not(:disabled):active { transform: translateY(0); }
+
+.ariy-cta-tg {
+  background: linear-gradient(180deg, #3a86f5 0%, #2d6fdf 100%);
+  box-shadow: 0 8px 24px rgba(53, 120, 245, 0.35), 0 1px 0 rgba(255, 255, 255, 0.18) inset;
+}
+.ariy-cta-tg:hover { box-shadow: 0 10px 28px rgba(53, 120, 245, 0.5), 0 1px 0 rgba(255, 255, 255, 0.22) inset; }
+
+.ariy-cta-secondary {
+  background: linear-gradient(180deg, #1f2c4d 0%, #18223e 100%);
+  border: 1px solid rgba(120, 145, 200, 0.18);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  width: 100%;
+}
+
+.ariy-divider {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--display);
+  font-size: 11px;
+  text-transform: lowercase;
+  color: rgba(170, 181, 207, 0.55);
+  margin: 2px 0;
+}
+.ariy-divider::before,
+.ariy-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(170, 181, 207, 0.25), transparent);
+}
+
+.ariy-link-stack {
+  display: flex; flex-direction: column; gap: 12px;
+  margin-top: 2px;
+}
+.ariy-link {
+  background: transparent;
+  border: none;
+  padding: 6px 0;
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--fg);
+  cursor: pointer;
+  transition: color 0.15s;
+  text-align: center;
+}
+.ariy-link:hover { color: #6aa3ff; }
+.ariy-link-dim { color: rgba(170, 181, 207, 0.55); }
+.ariy-link-dim:hover { color: rgba(170, 181, 207, 0.85); }
+
+.ariy-expand-form {
+  display: flex; flex-direction: column; gap: 10px;
+  margin-top: 10px;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(15, 23, 48, 0.5);
+  border: 1px solid rgba(120, 145, 200, 0.12);
+}
+.ariy-input { width: 100%; }
+
+.ariy-tg-pending {
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 22px;
+  border-radius: 14px;
+  background: rgba(15, 23, 48, 0.45);
+  border: 1px solid rgba(53, 120, 245, 0.25);
+  text-align: center;
+}
+.ariy-tg-pending-title {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--fg);
+  margin: 0;
+}
+.ariy-tg-pending-hint {
+  font-family: var(--display);
+  font-size: 12px;
+  color: rgba(170, 181, 207, 0.7);
+  margin: 0;
+  line-height: 1.4;
+}
+.ariy-link-btn {
+  background: transparent;
+  border: none;
+  font-family: var(--display);
+  font-size: 12px;
+  color: rgba(170, 181, 207, 0.55);
+  cursor: pointer;
+  padding: 4px 0;
+  transition: color 0.15s;
+}
+.ariy-link-btn:hover { color: var(--fg); text-decoration: underline; }

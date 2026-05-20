@@ -7,7 +7,7 @@
 //! Этот модуль остался только для:
 //!
 //! 1. **`cleanup_orphan_resources()`** — на старте helper-сервиса чистит
-//!    остатки от упавших сессий: nemefisto-* WinTUN-адаптеры и наши
+//!    остатки от упавших сессий: ariy-* WinTUN-адаптеры и наши
 //!    half-default routes через `198.18.0.1` (старый tun2proxy-префикс).
 //!
 //! 2. **`current_tun_interface_index()`** — поиск активного TUN-адаптера
@@ -20,7 +20,7 @@
 //!    отличаются по `Description`: WireGuard ставит `"Wintun Userspace
 //!    Tunnel"`, sing-box — `"sing-box"`, mihomo — `"Mihomo"`. Делаем:
 //!
-//!    1. **Alias prefix `nemefisto-`** — наш default-формат (`nemefisto-<pid>`).
+//!    1. **Alias prefix `ariy-`** — наш default-формат (`ariy-<pid>`).
 //!       Нужно матчить и для sing-box, и для mihomo если в YAML стоит
 //!       наш override.
 //!    2. **Description ∈ {sing-box, Mihomo, wintun, WireGuard}** —
@@ -53,10 +53,10 @@ use super::helper_log::log as hlog;
 use super::routing;
 
 /// Префикс имени TUN-адаптера. По умолчанию sing-box стартует с
-/// `nemefisto-<pid>`. Mihomo built-in TUN использует имя из YAML
+/// `ariy-<pid>`. Mihomo built-in TUN использует имя из YAML
 /// (typically `Meta`, но мы не переопределяем — для mihomo детект
 /// идёт по description либо IP).
-const TUN_NAME_PREFIX: &str = "nemefisto-";
+const TUN_NAME_PREFIX: &str = "ariy-";
 /// Адрес TUN-интерфейса от tun2proxy-эпохи (0.1.1 и ранее). Сейчас
 /// sing-box создаёт TUN с другим IP по умолчанию, но half-routes на этот
 /// IP могут остаться от старых сессий — чистим.
@@ -78,7 +78,7 @@ const IF_OPER_STATUS_UP: i32 = 1;
 pub async fn current_tun_interface_index(expect_tun: bool) -> Option<u32> {
     if !expect_tun {
         // Proxy-режим: TUN-адаптера быть не должно. Если от прошлой
-        // TUN-сессии остался stale `nemefisto-*` адаптер (sing-box умер
+        // TUN-сессии остался stale `ariy-*` адаптер (sing-box умер
         // не успев его почистить, OperStatus всё ещё Up), мы НЕ должны
         // добавлять allow-фильтр для него — kill-switch получится с
         // мёртвым LUID, FwpmFilterAdd0 валит транзакцию целиком.
@@ -121,7 +121,7 @@ struct TunCandidate {
 ///    (sing-box default 198.18.0.1/15, mihomo default 198.18.0.1/16)
 ///    сидят там. WireGuard / OpenVPN / других VPN тут НЕ бывает —
 ///    диапазон практически зарезервирован.
-/// 2. Alias начинается с `nemefisto-` — наша явная подпись TUN-имени.
+/// 2. Alias начинается с `ariy-` — наша явная подпись TUN-имени.
 ///
 /// **Description-match** (sing-tun / wintun / WireGuard Tunnel / Mihomo)
 /// — НЕ доверенный, потому что у юзера может быть параллельно работающий
@@ -137,14 +137,14 @@ fn find_our_tun_interface_index_blocking() -> Option<u32> {
     if let Some(ip_idx) = find_interface_with_ip_in_our_range() {
         if let Some(c) = scan.nemefisto_aliased.iter().find(|c| c.if_index == ip_idx) {
             hlog(&format!(
-                "[helper-tun] выбран по IP 198.18.0.0/15 + alias `nemefisto-`: ifIndex={} alias={:?} desc={:?}",
+                "[helper-tun] выбран по IP 198.18.0.0/15 + alias `ariy-`: ifIndex={} alias={:?} desc={:?}",
                 c.if_index, c.alias, c.description
             ));
         } else {
             // 12.E маскированное имя (`wlan99` / `Local Area Connection N`)
-            // — alias не nemefisto-, но IP наш → точно наш TUN.
+            // — alias не ariy-, но IP наш → точно наш TUN.
             hlog(&format!(
-                "[helper-tun] выбран по IP 198.18.0.0/15 (без nemefisto-alias, маскировка 12.E?): ifIndex={ip_idx}"
+                "[helper-tun] выбран по IP 198.18.0.0/15 (без ariy-alias, маскировка 12.E?): ifIndex={ip_idx}"
             ));
         }
         return Some(ip_idx);
@@ -152,20 +152,20 @@ fn find_our_tun_interface_index_blocking() -> Option<u32> {
 
     // 2. Без IP-match — пробуем alias prefix. Это случай когда движок
     //    создал адаптер, но IP ещё не назначен (race на старте sing-box).
-    //    На следующих retry будет IP — но если адаптер уже nemefisto-
+    //    На следующих retry будет IP — но если адаптер уже ariy-
     //    то и так наш.
     if !scan.nemefisto_aliased.is_empty() {
         let c = &scan.nemefisto_aliased[0];
         if scan.nemefisto_aliased.len() > 1 {
             hlog(&format!(
-                "[helper-tun] {} nemefisto-кандидатов без IP-match — берём первого: ifIndex={} alias={:?}",
+                "[helper-tun] {} ariy-кандидатов без IP-match — берём первого: ifIndex={} alias={:?}",
                 scan.nemefisto_aliased.len(),
                 c.if_index,
                 c.alias
             ));
         } else {
             hlog(&format!(
-                "[helper-tun] выбран по alias `nemefisto-` (IP ещё не назначен): ifIndex={} alias={:?} desc={:?}",
+                "[helper-tun] выбран по alias `ariy-` (IP ещё не назначен): ifIndex={} alias={:?} desc={:?}",
                 c.if_index, c.alias, c.description
             ));
         }
@@ -186,7 +186,7 @@ fn find_our_tun_interface_index_blocking() -> Option<u32> {
 
 #[derive(Debug, Default)]
 struct ScanResult {
-    /// Адаптеры с alias начинающимся на `nemefisto-` — точно наши.
+    /// Адаптеры с alias начинающимся на `ariy-` — точно наши.
     nemefisto_aliased: Vec<TunCandidate>,
     /// Адаптеры с подозрительным description (WireGuard / sing-tun /
     /// wintun / Mihomo), но БЕЗ нашего alias-prefix. Не доверяем.
@@ -194,7 +194,7 @@ struct ScanResult {
 }
 
 /// Перебор всех интерфейсов через `GetIfTable2`. Разделяет результат
-/// на две группы: `nemefisto-`-aliased (доверяем) и description-only
+/// на две группы: `ariy-`-aliased (доверяем) и description-only
 /// (логируем, не выбираем).
 fn scan_interfaces() -> ScanResult {
     let mut result = ScanResult::default();
@@ -238,14 +238,14 @@ fn scan_interfaces() -> ScanResult {
     }
 
     hlog(&format!(
-        "[helper-tun] scan: nemefisto-aliased={} description-only={} (всего {} интерфейсов)",
+        "[helper-tun] scan: ariy-aliased={} description-only={} (всего {} интерфейсов)",
         result.nemefisto_aliased.len(),
         result.description_only.len(),
         table.NumEntries
     ));
     for c in &result.nemefisto_aliased {
         hlog(&format!(
-            "  [TRUSTED nemefisto-] ifIndex={} alias={:?} desc={:?}",
+            "  [TRUSTED ariy-] ifIndex={} alias={:?} desc={:?}",
             c.if_index, c.alias, c.description
         ));
     }
@@ -332,7 +332,7 @@ fn wide_z_to_string(buf: &[u16]) -> String {
 ///
 /// После аварийного завершения (kernel panic, kill -9, hardware crash)
 /// в системе могут остаться:
-///   1. WinTUN-адаптеры с префиксом `nemefisto-` от sing-box / mihomo /
+///   1. WinTUN-адаптеры с префиксом `ariy-` от sing-box / mihomo /
 ///      legacy tun2proxy.
 ///   2. Half-default routes (`0.0.0.0/1` и `128.0.0.0/1` через
 ///      `198.18.0.1`) от legacy tun2proxy-эпохи (sing-box/mihomo
@@ -340,7 +340,7 @@ fn wide_z_to_string(buf: &[u16]) -> String {
 ///
 /// Best-effort: каждая операция игнорирует свои ошибки.
 pub async fn cleanup_orphan_resources() {
-    // 1. nemefisto-* адаптеры. PowerShell wildcard.
+    // 1. ariy-* адаптеры. PowerShell wildcard.
     let wildcard = format!("{TUN_NAME_PREFIX}*");
     if let Err(e) = routing::cleanup_orphan_tun(&wildcard).await {
         eprintln!("[helper-tun] cleanup_orphan_tun({wildcard}) → {e}");
@@ -402,11 +402,11 @@ mod tests {
 
     #[test]
     fn wide_z_to_string_handles_null_terminator() {
-        let mut buf: Vec<u16> = "nemefisto-1234".encode_utf16().collect();
+        let mut buf: Vec<u16> = "ariy-1234".encode_utf16().collect();
         buf.push(0);
         // Дополняем мусором после null — должны его проигнорировать.
         buf.extend_from_slice(&[0xDEAD, 0xBEEF, 0]);
-        assert_eq!(wide_z_to_string(&buf), "nemefisto-1234");
+        assert_eq!(wide_z_to_string(&buf), "ariy-1234");
     }
 
     #[test]
@@ -418,9 +418,9 @@ mod tests {
     #[test]
     fn alias_prefix_const_is_lowercase_safe() {
         // Sanity: в коде сравниваем `alias.starts_with(TUN_NAME_PREFIX)`
-        // case-sensitive — конфиги используют именно "nemefisto-" в
+        // case-sensitive — конфиги используют именно "ariy-" в
         // нижнем регистре, не "Nemefisto-". Если когда-нибудь поменяется —
         // тест поймает.
-        assert_eq!(TUN_NAME_PREFIX, "nemefisto-");
+        assert_eq!(TUN_NAME_PREFIX, "ariy-");
     }
 }

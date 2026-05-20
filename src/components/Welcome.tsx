@@ -1,4 +1,4 @@
-import { useState, type DragEvent, type FormEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useSubscriptionStore } from "../stores/subscriptionStore";
@@ -7,38 +7,67 @@ import { buildSubUrl } from "../lib/ariy-api";
 import { DASHBOARD_URL } from "../lib/constants";
 
 /**
- * Карточка первого запуска для Ariy VPN.
+ * Welcome — стартовый экран по дизайну example.com.
  *
- * Поддерживает три способа входа:
- *   1. **Email / password** (default) — POST /v1/auth/email/login через
- *      [[authStore]]. После успеха sub_url = `buildSubUrl(session_token)`
- *      и сразу триггерится existing subscription flow.
- *   2. **Telegram deep-link** — placeholder, готовим в v0.2.0
- *      (нужен polling /v1/auth/telegram/poll).
- *   3. **Прямая ссылка подписки** — legacy fallback для тех у кого
- *      sub-URL без auth. Сохранён старый drag-and-drop.
+ * Layout (сверху вниз):
+ *   1. Hero — логотип Ariy + name + subtitle
+ *   2. Primary CTA — большая голубая «Войти через Telegram»
+ *   3. «или» — разделитель
+ *   4. Stack ссылок: «Войти по email», «Использовать ссылку подписки», «Зарегистрироваться»
+ *
+ * При клике на email/sub-url ссылку — раскрывается inline-форма соответствующего типа.
+ * Telegram-flow ведёт через polling backend'а: видим UI «открыли бота, ждём…»,
+ * polling каждые 3с, при `status:linked` → setSubUrl + fetchSubscription.
  */
-type Mode = "email" | "sub-url";
+type ExpandMode = null | "email" | "sub-url";
 
 export function Welcome() {
   const { t } = useTranslation();
 
-  // Subscription store (legacy sub-URL path)
   const subUrl = useSubscriptionStore((s) => s.url);
   const subLoading = useSubscriptionStore((s) => s.loading);
   const subError = useSubscriptionStore((s) => s.error);
   const setSubUrl = useSubscriptionStore((s) => s.setUrl);
   const fetchSubscription = useSubscriptionStore((s) => s.fetchSubscription);
 
-  // Auth store (email path)
   const authBusy = useAuthStore((s) => s.busy);
+  const tg = useAuthStore((s) => s.tg);
+  const startTg = useAuthStore((s) => s.startTelegramLogin);
+  const cancelTg = useAuthStore((s) => s.cancelTelegramLogin);
   const loginEmail = useAuthStore((s) => s.loginEmail);
+  const sessionToken = useAuthStore((s) => s.sessionToken);
 
-  const [mode, setMode] = useState<Mode>("email");
+  const [expand, setExpand] = useState<ExpandMode>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const lastSessionToken = useRef<string | null>(null);
+
+  // После того как сессия появилась (любой login прошёл) — кидаем sub_url в существующий subscriptionStore.
+  useEffect(() => {
+    if (sessionToken && sessionToken !== lastSessionToken.current) {
+      lastSessionToken.current = sessionToken;
+      setSubUrl(buildSubUrl(sessionToken));
+      void fetchSubscription();
+    }
+  }, [sessionToken, setSubUrl, fetchSubscription]);
+
+  const onClickTelegram = async () => {
+    if (tg) {
+      // Уже идёт — re-open deep-link на случай если юзер не успел
+      void openUrl(tg.deepLink).catch(() => {});
+      return;
+    }
+    const res = await startTg();
+    if (res.ok) {
+      // Открыли deep-link сразу после успешного request
+      const fresh = useAuthStore.getState().tg;
+      if (fresh) void openUrl(fresh.deepLink).catch(() => {});
+    } else {
+      setEmailError(res.message);
+    }
+  };
 
   const onDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -46,19 +75,17 @@ export function Welcome() {
     setDragActive(true);
   };
   const onDragLeave = () => setDragActive(false);
-
   const onDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragActive(false);
-    if (mode !== "sub-url") return; // drag-drop работает только в legacy
+    if (expand !== "sub-url") return;
     const dt = e.dataTransfer;
     if (!dt) return;
     let raw = dt.getData("text/uri-list");
     if (raw) raw = raw.split(/\r?\n/).find((l) => l && !l.startsWith("#")) ?? "";
     if (!raw) raw = dt.getData("text/plain");
     raw = raw.trim();
-    if (!raw) return;
-    if (!/^https?:\/\//i.test(raw)) return;
+    if (!raw || !/^https?:\/\//i.test(raw)) return;
     setSubUrl(raw);
     void fetchSubscription();
   };
@@ -69,113 +96,127 @@ export function Welcome() {
     if (!email.trim() || !password) return;
     const res = await loginEmail(email, password);
     if (!res.ok) {
-      // Маппим коды в i18n-ключи где есть, иначе показываем raw сообщение.
       const i18nKey =
-        res.code === "invalid_credentials"
-          ? "welcome.login.err.invalidCredentials"
-          : res.code === "rate_limited"
-            ? "welcome.login.err.rateLimited"
-            : res.code === "bad_input"
-              ? "welcome.login.err.badInput"
+        res.code === "invalid_credentials" ? "welcome.login.err.invalidCredentials"
+          : res.code === "rate_limited" ? "welcome.login.err.rateLimited"
+            : res.code === "bad_input" ? "welcome.login.err.badInput"
               : null;
       setEmailError(i18nKey ? t(i18nKey) : res.message);
-      return;
-    }
-    // Логин успешен — собираем sub_url и кидаем в существующий flow.
-    // backend endpoint GET /v1/sub/<token> ещё не задеплоен на auth-api;
-    // когда задеплоится — subscription.rs парсер скачает контент по
-    // этому URL и всё заработает as-is.
-    const sessionToken = useAuthStore.getState().sessionToken;
-    if (sessionToken) {
-      setSubUrl(buildSubUrl(sessionToken));
-      void fetchSubscription();
     }
   };
 
   return (
     <div
-      className={`welcome${dragActive ? " is-drag-over" : ""}`}
+      className={`welcome ariy-welcome${dragActive ? " is-drag-over" : ""}`}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      <div className="welcome-tag">— {t("welcome.tag")}</div>
-      <h2 className="welcome-title">{t("welcome.title")}</h2>
+      <div className="ariy-hero">
+        <div className="ariy-hero-logo">
+          <img src="/logo.png" alt="Ariy VPN" />
+        </div>
+        <h1 className="ariy-hero-title">Ariy VPN</h1>
+        <p className="ariy-hero-subtitle">{t("welcome.heroSubtitle")}</p>
+      </div>
 
-      {mode === "email" ? (
-        <form onSubmit={onSubmitEmail} className="welcome-login-form" style={{ marginTop: 12 }}>
-          <p className="welcome-desc">{t("welcome.login.intro")}</p>
-          <input
-            type="email"
-            autoFocus
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder={t("welcome.login.emailPlaceholder")}
-            className="input"
-            style={{ marginTop: 8 }}
-          />
-          <input
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder={t("welcome.login.passwordPlaceholder")}
-            className="input"
-            style={{ marginTop: 8 }}
-          />
-          <button
-            type="submit"
-            disabled={authBusy || subLoading || !email.trim() || !password}
-            className="btn-ghost"
-            style={{ marginTop: 8, width: "100%" }}
-          >
-            {authBusy || subLoading ? "…" : t("welcome.login.submit")}
+      {tg ? (
+        <div className="ariy-tg-pending">
+          <p className="ariy-tg-pending-title">{t("welcome.login.tgPending")}</p>
+          <p className="ariy-tg-pending-hint">{t("welcome.login.tgPendingHint")}</p>
+          <button type="button" className="ariy-cta ariy-cta-secondary" onClick={() => openUrl(tg.deepLink).catch(() => {})}>
+            {t("welcome.login.tgReopen")}
           </button>
-          {emailError && <pre className="hero-error" style={{ marginTop: 8 }}>{emailError}</pre>}
-
-          <div className="welcome-login-links" style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
-            <button type="button" className="link-btn" onClick={() => openUrl(DASHBOARD_URL).catch(() => {})}>
-              {t("welcome.login.register")}
-            </button>
-            <button type="button" className="link-btn" onClick={() => setMode("sub-url")}>
-              {t("welcome.login.useSubUrl")}
-            </button>
-          </div>
-        </form>
+          <button type="button" className="ariy-link-btn" onClick={cancelTg}>
+            {t("welcome.login.tgCancel")}
+          </button>
+        </div>
       ) : (
         <>
-          <p className="welcome-desc">
-            {t("welcome.desc.before")}&nbsp;
-            <span className="bracket">https://sub.example.com/...</span>
-            {t("welcome.desc.after")}
-          </p>
-          <p className="welcome-desc welcome-desc-hint">{t("welcome.dropHint")}</p>
-          <div className="row-input" style={{ marginTop: 8 }}>
-            <input
-              type="url"
-              autoFocus
-              value={subUrl}
-              onChange={(e) => setSubUrl(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && fetchSubscription()}
-              placeholder="https://sub.example.com/..."
-              className="input"
-            />
-            <button
-              type="button"
-              disabled={subLoading || !subUrl.trim()}
-              onClick={() => fetchSubscription()}
-              className="btn-ghost"
-            >
-              {subLoading ? "…" : t("welcome.load")}
+          <button
+            type="button"
+            className="ariy-cta ariy-cta-tg"
+            disabled={authBusy}
+            onClick={onClickTelegram}
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M9.78 15.7l-.36 4.06c.51 0 .74-.22 1-.48l2.4-2.3 4.99 3.65c.91.5 1.56.24 1.81-.84l3.27-15.31h.01c.29-1.34-.49-1.88-1.39-1.55L1.46 9.97c-1.32.5-1.3 1.23-.23 1.55l4.97 1.55 11.55-7.27c.54-.36 1.04-.16.63.2L9.78 15.7z"
+              />
+            </svg>
+            <span>{t("welcome.login.tg")}</span>
+          </button>
+
+          <div className="ariy-divider">
+            <span>{t("welcome.login.or")}</span>
+          </div>
+
+          <div className="ariy-link-stack">
+            <button type="button" className="ariy-link" onClick={() => setExpand(expand === "email" ? null : "email")}>
+              {t("welcome.login.email")}
+            </button>
+            <button type="button" className="ariy-link" onClick={() => setExpand(expand === "sub-url" ? null : "sub-url")}>
+              {t("welcome.login.subUrl")}
+            </button>
+            <button type="button" className="ariy-link ariy-link-dim" onClick={() => openUrl(DASHBOARD_URL).catch(() => {})}>
+              {t("welcome.login.register")}
             </button>
           </div>
-          {subError && <pre className="hero-error">{subError}</pre>}
-          <div style={{ marginTop: 12 }}>
-            <button type="button" className="link-btn" onClick={() => setMode("email")}>
-              {t("welcome.login.backToEmail")}
-            </button>
-          </div>
+
+          {expand === "email" && (
+            <form onSubmit={onSubmitEmail} className="ariy-expand-form">
+              <input
+                type="email"
+                autoFocus
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={t("welcome.login.emailPlaceholder")}
+                className="input ariy-input"
+              />
+              <input
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={t("welcome.login.passwordPlaceholder")}
+                className="input ariy-input"
+              />
+              <button
+                type="submit"
+                disabled={authBusy || subLoading || !email.trim() || !password}
+                className="ariy-cta ariy-cta-secondary"
+              >
+                {authBusy || subLoading ? "…" : t("welcome.login.submit")}
+              </button>
+              {emailError && <pre className="hero-error">{emailError}</pre>}
+            </form>
+          )}
+
+          {expand === "sub-url" && (
+            <div className="ariy-expand-form">
+              <input
+                type="url"
+                autoFocus
+                value={subUrl}
+                onChange={(e) => setSubUrl(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && fetchSubscription()}
+                placeholder="https://sub.example.com/..."
+                className="input ariy-input"
+              />
+              <button
+                type="button"
+                disabled={subLoading || !subUrl.trim()}
+                onClick={() => fetchSubscription()}
+                className="ariy-cta ariy-cta-secondary"
+              >
+                {subLoading ? "…" : t("welcome.load")}
+              </button>
+              {subError && <pre className="hero-error">{subError}</pre>}
+              <p className="welcome-desc welcome-desc-hint">{t("welcome.dropHint")}</p>
+            </div>
+          )}
         </>
       )}
     </div>

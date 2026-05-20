@@ -1,19 +1,23 @@
 /**
  * Клиент к Ariy auth-api (`api.example.com`).
  *
- * Сегодня этот же API обслуживает Chrome-расширение:
- *   - `POST /v1/auth/email/login` — email/password логин (v4.16.0)
- *   - `POST /v1/auth/telegram/{request,poll}` — deep-link логин (v4.14.0)
- *   - `POST /v1/session {sub_url, hwid}` — legacy путь для расширения
- *   - `POST /v1/auth/logout` — инвалидация сессии
+ * Использует `@tauri-apps/plugin-http` вместо native window.fetch —
+ * это HTTP-запрос из Rust, минуя CORS-проверки WebView2. Иначе
+ * `tauri://localhost` origin падает с `TypeError: Failed to fetch` если
+ * бэк не отдаёт `Access-Control-Allow-Origin` для нашего origin.
  *
- * **Endpoint которого пока нет, нужно добавить в auth-api:**
- *   - `GET /v1/sub/<session_token>` — отдаёт raw Remnawave-подписку
- *     (base64-encoded list of vless:// URIs или sing-box JSON). После
- *     добавления десктоп просто складывает этот URL в
- *     `subscriptionStore.url`, и existing Rust subscription.rs парсер
- *     работает as-is. См. план в TODO-комментарии ниже.
+ * Endpoints (mirror Chrome-расширения):
+ *   POST /v1/auth/email/login           — login по email/password
+ *   POST /v1/auth/telegram/request      — старт TG deep-link flow
+ *   POST /v1/auth/telegram/poll         — polling статуса TG-auth
+ *   POST /v1/auth/logout                — инвалидация сессии
+ *
+ * **Новый endpoint которого пока нет, нужно добавить в auth-api:**
+ *   GET  /v1/sub/<session_token>        — raw Remnawave subscription
+ *   (см. docs/AUTH-API-INTEGRATION.md)
  */
+
+import { fetch } from "@tauri-apps/plugin-http";
 
 const API_BASE = "https://api.example.com";
 
@@ -24,43 +28,25 @@ export class AriyApiError extends Error {
   }
 }
 
-/** Краткий профиль авторизованного юзера (как приходит из auth-api). */
 export type AriyUser = {
   id: number;
   email?: string | null;
   telegram_id?: number | null;
-  /** Имя/название отображаемое в sub-strip плашке (subscription title). */
   title?: string | null;
 };
 
 export type LoginEmailResponse = {
   session_token: string;
-  /** TTL в секундах. Сейчас 30 дней sliding. */
   expires_in?: number;
   user: AriyUser;
 };
 
-/**
- * Логин по email/password. Mirror у cabinet endpoint
- * `POST /api/cabinet/auth/email/login`.
- *
- * При успехе — клиент сохраняет `session_token` (см. [[authStore]]) и
- * передаёт его в `Authorization: Bearer …` для последующих запросов.
- *
- * Возможные ошибки от сервера:
- *   - 401 invalid_credentials — неверный email или password
- *   - 400 bad_input — невалидный формат email/password
- *   - 429 rate_limited — слишком частые попытки (sliding 30/min/IP)
- *   - 5xx — backend / cabinet недоступен
- */
-export async function loginEmail(
-  email: string,
-  password: string,
-): Promise<LoginEmailResponse> {
-  const r = await fetch(`${API_BASE}/v1/auth/email/login`, {
+async function postJson(path: string, body: unknown): Promise<any> {
+  const r = await fetch(`${API_BASE}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify(body),
+    connectTimeout: 10_000,
   });
   const txt = await r.text();
   let json: any = null;
@@ -70,44 +56,57 @@ export async function loginEmail(
     const msg = json?.message || `${r.status} ${r.statusText}`;
     throw new AriyApiError(r.status, code, msg);
   }
+  return json;
+}
+
+/** Логин по email/password. */
+export async function loginEmail(email: string, password: string): Promise<LoginEmailResponse> {
+  const json = await postJson("/v1/auth/email/login", { email, password });
   if (!json?.session_token) {
-    throw new AriyApiError(r.status, "bad_response", "auth-api вернул ответ без session_token");
+    throw new AriyApiError(0, "bad_response", "auth-api вернул ответ без session_token");
   }
   return json as LoginEmailResponse;
 }
 
-/** Дёргает auth-api logout endpoint (best-effort — игнорирует сетевые ошибки). */
+/** Telegram deep-link flow — старт. Возвращает токен запроса + URL для открытия в боте. */
+export type TelegramRequestResponse = {
+  request_token: string;
+  /** `https://t.me/AriyVPN_Bot?start=webauth_<token>` или `tg://...` */
+  deep_link: string;
+  /** Время жизни request_token в секундах (обычно 5 минут). */
+  expires_in?: number;
+};
+export async function telegramRequest(): Promise<TelegramRequestResponse> {
+  const json = await postJson("/v1/auth/telegram/request", {});
+  if (!json?.request_token || !json?.deep_link) {
+    throw new AriyApiError(0, "bad_response", "telegram/request вернул некорректный ответ");
+  }
+  return json as TelegramRequestResponse;
+}
+
+/** Polling статуса TG-auth. Возвращает либо `pending`, либо `linked` с session_token. */
+export type TelegramPollResponse =
+  | { status: "pending" }
+  | { status: "linked"; session_token: string; user: AriyUser }
+  | { status: "expired" };
+export async function telegramPoll(requestToken: string): Promise<TelegramPollResponse> {
+  return await postJson("/v1/auth/telegram/poll", { request_token: requestToken });
+}
+
+/** Best-effort logout. */
 export async function logout(sessionToken: string): Promise<void> {
   try {
     await fetch(`${API_BASE}/v1/auth/logout`, {
       method: "POST",
       headers: { "Authorization": `Bearer ${sessionToken}` },
+      connectTimeout: 10_000,
     });
-  } catch {
-    // server-side инвалидация — best effort, локальный logout всё равно
-    // проходит даже если сервер недоступен.
-  }
+  } catch { /* ignore */ }
 }
 
 /**
- * Сконструировать URL подписки для нашего auth-api.
- *
- * **TODO (backend, отдельной сессией):** добавить в `auth-api` endpoint
- *
- *     GET /v1/sub/:session_token
- *
- * который:
- *   1. Резолвит session_token → user → user.sub_url (raw Remnawave).
- *   2. Делает HTTP-fetch на raw Remnawave sub_url с UA `Happ/2.7.0` и
- *      `x-hwid=sha256(sub_url)`.
- *   3. Возвращает body Remnawave подписки как есть (base64-encoded list
- *      или sing-box JSON, в зависимости от `User-Agent` запроса).
- *   4. Прокидывает стандартные subscription-заголовки (`subscription-userinfo`,
- *      `profile-title`, `profile-update-interval`, и т.п.) от Remnawave.
- *
- * Когда endpoint появится — десктоп просто сложит этот URL в
- * `subscriptionStore.url`, и existing Rust subscription.rs парсер сразу
- * работает: фетчит, парсит, конвертирует xray→sing-box если нужно.
+ * Сконструировать URL подписки. Backend endpoint `GET /v1/sub/:token`
+ * пока не задеплоен — см. docs/AUTH-API-INTEGRATION.md.
  */
 export function buildSubUrl(sessionToken: string): string {
   return `${API_BASE}/v1/sub/${encodeURIComponent(sessionToken)}`;

@@ -20,7 +20,7 @@
 //!    добавленное, не оставляя half-applied state.
 //! 3. **Cleanup на старте** (`cleanup_provider`) — при запуске helper'а
 //!    в persistent-engine удаляем любые объекты с нашим
-//!    `NEMEFISTO_PROVIDER_GUID` — страховка если DYNAMIC по какой-то
+//!    `ARIY_PROVIDER_GUID` — страховка если DYNAMIC по какой-то
 //!    причине не сработал (теоретически невозможно, но WFP — серьёзный
 //!    API, перестраховка не лишняя).
 
@@ -40,21 +40,30 @@ use windows_sys::Win32::System::Rpc::RPC_C_AUTHN_WINNT;
 /// GUID нашего provider'а — постоянная метка чтобы при cleanup мы могли
 /// найти именно «наши» объекты, не задев чужие WFP-фильтры (Defender,
 /// другие VPN, etc).
-pub const NEMEFISTO_PROVIDER_GUID: GUID = GUID {
-    data1: 0xc6f1_bd86,
-    data2: 0xc5e9,
-    data3: 0x4e7a,
-    data4: [0x9d, 0x7a, 0x2d, 0x81, 0xd6, 0xe4, 0xa2, 0xc1],
+///
+/// **Важно:** этот GUID должен отличаться от Nemefisto upstream'а
+/// (`c6f1bd86-...`), иначе наш и их клиент будут видеть одни и те же
+/// WFP-фильтры в ядре, удалять друг друга и блокировать оба
+/// kill-switch'а одновременно. Сгенерирован свежим v4-uuid при ребренде
+/// 2026-05-20: `b7c1dc3c-26dc-4351-bb6f-ca2b9b7af645`.
+pub const ARIY_PROVIDER_GUID: GUID = GUID {
+    data1: 0xb7c1_dc3c,
+    data2: 0x26dc,
+    data3: 0x4351,
+    data4: [0xbb, 0x6f, 0xca, 0x2b, 0x9b, 0x7a, 0xf6, 0x45],
 };
 
 /// GUID sublayer'а — наша группа фильтров. Высокий weight чтобы они
 /// рассматривались ДО windows-default рулежа (например allow-all из
 /// Mullvad/NordVPN если оба активны).
-pub const NEMEFISTO_SUBLAYER_GUID: GUID = GUID {
-    data1: 0xc6f1_bd87,
-    data2: 0xc5e9,
-    data3: 0x4e7a,
-    data4: [0x9d, 0x7a, 0x2d, 0x81, 0xd6, 0xe4, 0xa2, 0xc2],
+///
+/// Аналогично provider'у — отличается от Nemefisto upstream'а
+/// (`c6f1bd87-...`). Сгенерирован `eb0551f9-3e23-4d02-8122-bbdbbb812dbb`.
+pub const ARIY_SUBLAYER_GUID: GUID = GUID {
+    data1: 0xeb05_51f9,
+    data2: 0x3e23,
+    data3: 0x4d02,
+    data4: [0x81, 0x22, 0xbb, 0xdb, 0xbb, 0x81, 0x2d, 0xbb],
 };
 
 // Веса фильтров живут в firewall.rs — он единственный потребитель
@@ -434,7 +443,7 @@ impl WfpEngine {
         conditions: &mut [FWPM_FILTER_CONDITION0],
     ) -> Result<()> {
         let name_w = to_wide(name);
-        let mut provider_key_copy = NEMEFISTO_PROVIDER_GUID;
+        let mut provider_key_copy = ARIY_PROVIDER_GUID;
         unsafe {
             let mut filter: FWPM_FILTER0 = std::mem::zeroed();
             filter.layerKey = layer;
@@ -495,7 +504,7 @@ pub fn has_orphan_filters() -> Result<bool> {
     unsafe {
         let rc = FwpmSubLayerGetByKey0(
             engine.handle,
-            &NEMEFISTO_SUBLAYER_GUID,
+            &ARIY_SUBLAYER_GUID,
             &mut sublayer_ptr,
         );
         if rc == ERROR_SUCCESS {
@@ -533,11 +542,11 @@ pub fn cleanup_provider() -> Result<()> {
         unsafe {
             // Порядок: sublayer → provider. Удаление sublayer удаляет
             // все его фильтры автоматически.
-            let rc = FwpmSubLayerDeleteByKey0(e.handle, &NEMEFISTO_SUBLAYER_GUID);
+            let rc = FwpmSubLayerDeleteByKey0(e.handle, &ARIY_SUBLAYER_GUID);
             if rc != ERROR_SUCCESS && rc != FWP_E_SUBLAYER_NOT_FOUND {
                 return Err(anyhow!("delete sublayer: 0x{:08x}", rc));
             }
-            let rc = FwpmProviderDeleteByKey0(e.handle, &NEMEFISTO_PROVIDER_GUID);
+            let rc = FwpmProviderDeleteByKey0(e.handle, &ARIY_PROVIDER_GUID);
             if rc != ERROR_SUCCESS && rc != FWP_E_PROVIDER_NOT_FOUND {
                 return Err(anyhow!("delete provider: 0x{:08x}", rc));
             }

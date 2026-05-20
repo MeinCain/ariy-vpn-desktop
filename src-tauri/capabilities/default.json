@@ -13,6 +13,13 @@
     "global-shortcut:allow-is-registered",
     "updater:default",
     "process:allow-restart",
-    "notification:default"
+    "notification:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://api.example.com/*" },
+        { "url": "https://cabinet.example.com/*" }
+      ]
+    }
   ]
 }

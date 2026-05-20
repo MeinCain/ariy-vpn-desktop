@@ -68,6 +68,11 @@ pub fn run() {
         // (`com.nemefisto.vpn-client`) — Windows группирует уведомления
         // под именем productName из tauri.conf.json.
         .plugin(tauri_plugin_notification::init())
+        // HTTP-плагин для frontend'а: чтобы наш ariy-api.ts мог fetch'ить
+        // api.example.com из WebView2 минуя CORS. Без него обычный
+        // window.fetch падает с TypeError: Failed to fetch если бэк не
+        // разрешает origin `tauri://localhost`.
+        .plugin(tauri_plugin_http::init())
         .manage(MihomoState::new())
         .manage(SingBoxState::new())
         .manage(vpn::MihomoApiState::new())

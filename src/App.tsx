@@ -21,7 +21,7 @@ import { BackgroundLayers } from "./components/effects/BackgroundLayers";
 const Scene3D = lazy(() =>
   import("./components/effects/Scene3D").then((m) => ({ default: m.Scene3D })),
 );
-import { CustomCursor } from "./components/effects/CustomCursor";
+// CustomCursor отключён в Ariy — используем системный курсор.
 import { WideAmbient } from "./components/effects/WideAmbient";
 import { AnnounceBanner } from "./components/AnnounceBanner";
 import { CrashRecoveryDialog } from "./components/CrashRecoveryDialog";
@@ -387,7 +387,6 @@ function App() {
         <Scene3D status={status} />
       </Suspense>
       <WideAmbient />
-      <CustomCursor />
 
       <div className="app">
         <div className="frame">

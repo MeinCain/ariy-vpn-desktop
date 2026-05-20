@@ -93,7 +93,7 @@ pub struct MuxOptions {
 /// helper SYSTEM-spawn'ит sing-box и tun inbound создаёт WinTUN-адаптер.
 #[derive(Debug, Clone)]
 pub struct TunOptions {
-    /// Имя WinTUN-адаптера. Дефолт `nemefisto-<pid>`. С 12.E может быть
+    /// Имя WinTUN-адаптера. Дефолт `ariy-<pid>`. С 12.E может быть
     /// замаскирован под `wlan99` / `Local Area Connection N` / `Ethernet N`.
     pub interface_name: String,
     /// CIDR адрес TUN-интерфейса. Используем `198.18.0.1/15` (RFC 2544
@@ -109,7 +109,7 @@ pub struct TunOptions {
 impl Default for TunOptions {
     fn default() -> Self {
         Self {
-            interface_name: format!("nemefisto-{}", std::process::id()),
+            interface_name: format!("ariy-{}", std::process::id()),
             address: "198.18.0.1/15".to_string(),
             mtu: 9000,
         }
@@ -2370,7 +2370,7 @@ mod tests {
     fn build_tun_mode_adds_tun_inbound() {
         let entry = vless_entry();
         let tun_opts = TunOptions {
-            interface_name: "nemefisto-test".to_string(),
+            interface_name: "ariy-test".to_string(),
             address: "198.18.0.1/15".to_string(),
             mtu: 9000,
         };
@@ -2378,7 +2378,7 @@ mod tests {
         let inbounds = cfg.json["inbounds"].as_array().unwrap();
         assert_eq!(inbounds.len(), 2);
         let tun = inbounds.iter().find(|i| i["type"] == "tun").unwrap();
-        assert_eq!(tun["interface_name"], "nemefisto-test");
+        assert_eq!(tun["interface_name"], "ariy-test");
         assert_eq!(tun["auto_route"], true);
         assert_eq!(tun["stack"], "gvisor");
         // auto_detect_interface перенесён с inbound на route в sing-box 1.11+.
@@ -3484,7 +3484,7 @@ mod tests {
             listen: "127.0.0.1",
             tun_mode: true,
             tun_options: Some(&TunOptions {
-                interface_name: "nemefisto-1234".to_string(),
+                interface_name: "ariy-1234".to_string(),
                 address: "198.18.0.1/15".to_string(),
                 mtu: 9000,
             }),
@@ -3496,7 +3496,7 @@ mod tests {
         let inbounds = patched["inbounds"].as_array().unwrap();
         assert_eq!(inbounds.len(), 2);
         assert!(inbounds.iter().any(|i| i["type"] == "mixed" && i["listen_port"] == 30000));
-        assert!(inbounds.iter().any(|i| i["type"] == "tun" && i["interface_name"] == "nemefisto-1234"));
+        assert!(inbounds.iter().any(|i| i["type"] == "tun" && i["interface_name"] == "ariy-1234"));
 
         // outbounds: оригинальный proxy + добавленный direct (block/dns не нужны)
         let outbounds = patched["outbounds"].as_array().unwrap();
@@ -3636,7 +3636,7 @@ mod tests {
             panic!("sing-box.exe не найден по пути {} — пропусти smoke-тест если он не нужен", exe.display());
         }
 
-        let tmp = std::env::temp_dir().join(format!("nemefisto-singbox-check-{}.json", label));
+        let tmp = std::env::temp_dir().join(format!("ariy-singbox-check-{}.json", label));
         std::fs::write(&tmp, serde_json::to_string_pretty(cfg).unwrap()).unwrap();
 
         let out = std::process::Command::new(&exe)
@@ -3666,7 +3666,7 @@ mod tests {
     fn smoke_vless_reality_tun_mode() {
         let entry = vless_entry();
         let tun = TunOptions {
-            interface_name: "nemefisto-test".to_string(),
+            interface_name: "ariy-test".to_string(),
             address: "198.18.0.1/15".to_string(),
             mtu: 9000,
         };

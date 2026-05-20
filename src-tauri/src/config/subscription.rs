@@ -513,26 +513,26 @@ fn build_subscription_meta(headers: &reqwest::header::HeaderMap) -> Option<Subsc
         header_str(name).and_then(|v| validate_enum(&v, allowed))
     };
     meta.theme = header_enum(
-        "x-nemefisto-theme",
+        "x-ariy-theme",
         &["dark", "light", "midnight", "sunset", "sand"],
     );
     meta.background = header_enum(
-        "x-nemefisto-background",
+        "x-ariy-background",
         &["crystal", "tunnel", "globe", "particles"],
     );
     meta.button_style = header_enum(
-        "x-nemefisto-button-style",
+        "x-ariy-button-style",
         &["glass", "flat", "neon", "metallic"],
     );
     meta.preset = header_enum(
-        "x-nemefisto-preset",
+        "x-ariy-preset",
         &["none", "fluent", "cupertino", "vice", "arcade", "glacier"],
     );
-    meta.mode = header_enum("x-nemefisto-mode", &["proxy", "tun"]);
+    meta.mode = header_enum("x-ariy-mode", &["proxy", "tun"]);
     // sing-box миграция (0.1.2): принимаем "xray" из старых подписок
     // (server-driven X-Nemefisto-Engine) — на фронте это маппится в
     // "sing-box". Whitelist расширяем чтобы не дропать legacy-значение.
-    meta.engine = header_enum("x-nemefisto-engine", &["sing-box", "mihomo", "xray"]);
+    meta.engine = header_enum("x-ariy-engine", &["sing-box", "mihomo", "xray"]);
 
     // Anti-DPI заголовки (этап 10)
     let header_bool = |name: &str| -> Option<bool> {

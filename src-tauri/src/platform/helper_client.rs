@@ -59,7 +59,7 @@ pub enum HelperRequest {
     /// Emergency cleanup — снять любые наши WFP-фильтры (для UI-кнопки
     /// «аварийный сброс»).
     KillSwitchForceCleanup,
-    /// Cleanup orphan TUN-адаптеров (`nemefisto-*`) и half-default
+    /// Cleanup orphan TUN-адаптеров (`ariy-*`) и half-default
     /// маршрутов через `198.18.0.1`. Часть UI-кнопки «восстановить сеть».
     OrphanCleanup,
     /// 14.E: read-only проверка остатков WFP-фильтров от прошлой
@@ -342,7 +342,7 @@ pub async fn shutdown_helper() -> Result<()> {
     }
 }
 
-/// Cleanup orphan TUN-ресурсов: адаптеры с префиксом `nemefisto-` и
+/// Cleanup orphan TUN-ресурсов: адаптеры с префиксом `ariy-` и
 /// half-default routes через `198.18.0.1`. Часть UI-кнопки
 /// «восстановить сеть». Безопасно вызывать только когда VPN не активен
 /// (иначе порвёт активный туннель).

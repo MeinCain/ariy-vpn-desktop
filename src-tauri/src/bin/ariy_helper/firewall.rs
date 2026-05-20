@@ -31,8 +31,8 @@ use windows_sys::Win32::NetworkManagement::WindowsFilteringPlatform::{
 
 use super::helper_log::log as hlog;
 use super::wfp::{
-    cleanup_provider as wfp_cleanup_provider, WfpEngine, NEMEFISTO_PROVIDER_GUID,
-    NEMEFISTO_SUBLAYER_GUID,
+    cleanup_provider as wfp_cleanup_provider, WfpEngine, ARIY_PROVIDER_GUID,
+    ARIY_SUBLAYER_GUID,
 };
 
 // Веса фильтров. Higher = проверяется первым. Block-all — без weight
@@ -190,10 +190,10 @@ fn enable_blocking(
     let engine = WfpEngine::open_dynamic().context("open WFP engine")?;
 
     engine.transaction(|e| {
-        e.add_provider(NEMEFISTO_PROVIDER_GUID, "Ariy VPN KillSwitch")?;
+        e.add_provider(ARIY_PROVIDER_GUID, "Ariy VPN KillSwitch")?;
         e.add_sublayer(
-            NEMEFISTO_SUBLAYER_GUID,
-            NEMEFISTO_PROVIDER_GUID,
+            ARIY_SUBLAYER_GUID,
+            ARIY_PROVIDER_GUID,
             "Ariy KillSwitch",
             0xFFFF,
         )?;
@@ -201,12 +201,12 @@ fn enable_blocking(
         // Block-all fallback в каждом layer.
         e.add_filter_block_all(
             FWPM_LAYER_ALE_AUTH_CONNECT_V4,
-            NEMEFISTO_SUBLAYER_GUID,
+            ARIY_SUBLAYER_GUID,
             "block-all v4",
         )?;
         e.add_filter_block_all(
             FWPM_LAYER_ALE_AUTH_CONNECT_V6,
-            NEMEFISTO_SUBLAYER_GUID,
+            ARIY_SUBLAYER_GUID,
             "block-all v6",
         )?;
 
@@ -215,7 +215,7 @@ fn enable_blocking(
         // до прокси.
         e.add_filter_allow_v4_subnet(
             FWPM_LAYER_ALE_AUTH_CONNECT_V4,
-            NEMEFISTO_SUBLAYER_GUID,
+            ARIY_SUBLAYER_GUID,
             "loopback v4",
             W_LOOPBACK,
             0x7F00_0000,
@@ -223,7 +223,7 @@ fn enable_blocking(
         )?;
         e.add_filter_allow_v6_addr(
             FWPM_LAYER_ALE_AUTH_CONNECT_V6,
-            NEMEFISTO_SUBLAYER_GUID,
+            ARIY_SUBLAYER_GUID,
             "loopback v6",
             W_LOOPBACK,
             ipv6_addr_octets("::1"),
@@ -240,7 +240,7 @@ fn enable_blocking(
             ] {
                 e.add_filter_allow_v4_subnet(
                     FWPM_LAYER_ALE_AUTH_CONNECT_V4,
-                    NEMEFISTO_SUBLAYER_GUID,
+                    ARIY_SUBLAYER_GUID,
                     name,
                     W_LAN,
                     addr,
@@ -253,7 +253,7 @@ fn enable_blocking(
             if !force_disable_ipv6 {
                 e.add_filter_allow_v6_subnet(
                     FWPM_LAYER_ALE_AUTH_CONNECT_V6,
-                    NEMEFISTO_SUBLAYER_GUID,
+                    ARIY_SUBLAYER_GUID,
                     "LAN link-local v6",
                     W_LAN,
                     ipv6_addr_octets("fe80::"),
@@ -261,7 +261,7 @@ fn enable_blocking(
                 )?;
                 e.add_filter_allow_v6_subnet(
                     FWPM_LAYER_ALE_AUTH_CONNECT_V6,
-                    NEMEFISTO_SUBLAYER_GUID,
+                    ARIY_SUBLAYER_GUID,
                     "LAN multicast v6",
                     W_LAN,
                     ipv6_addr_octets("ff00::"),
@@ -279,7 +279,7 @@ fn enable_blocking(
                 let addr = ipv4_to_u32(v4);
                 e.add_filter_allow_v4_addr(
                     FWPM_LAYER_ALE_AUTH_CONNECT_V4,
-                    NEMEFISTO_SUBLAYER_GUID,
+                    ARIY_SUBLAYER_GUID,
                     &format!("VPN server v4 #{i}"),
                     W_SERVER,
                     addr,
@@ -293,7 +293,7 @@ fn enable_blocking(
                 }
                 e.add_filter_allow_v6_addr(
                     FWPM_LAYER_ALE_AUTH_CONNECT_V6,
-                    NEMEFISTO_SUBLAYER_GUID,
+                    ARIY_SUBLAYER_GUID,
                     &format!("VPN server v6 #{i}"),
                     W_SERVER,
                     v6.octets(),
@@ -339,7 +339,7 @@ fn enable_blocking(
             // пропускаем (eprintln в add_filter_allow_app покажет).
             match e.add_filter_allow_app(
                 FWPM_LAYER_ALE_AUTH_CONNECT_V4,
-                NEMEFISTO_SUBLAYER_GUID,
+                ARIY_SUBLAYER_GUID,
                 &format!("app v4 {label}"),
                 W_APP,
                 path,
@@ -366,7 +366,7 @@ fn enable_blocking(
             }
             if let Err(err) = e.add_filter_allow_app(
                 FWPM_LAYER_ALE_AUTH_CONNECT_V6,
-                NEMEFISTO_SUBLAYER_GUID,
+                ARIY_SUBLAYER_GUID,
                 &format!("app v6 {label}"),
                 W_APP,
                 path,
@@ -406,7 +406,7 @@ fn enable_blocking(
                     for (layer, label) in layers {
                         e.add_filter_allow_local_interface_luid(
                             *layer,
-                            NEMEFISTO_SUBLAYER_GUID,
+                            ARIY_SUBLAYER_GUID,
                             label,
                             W_TUN_INTERFACE,
                             luid,
@@ -435,7 +435,7 @@ fn enable_blocking(
                     let addr = ipv4_to_u32(v4);
                     e.add_filter_allow_v4_addr_port_proto(
                         FWPM_LAYER_ALE_AUTH_CONNECT_V4,
-                        NEMEFISTO_SUBLAYER_GUID,
+                        ARIY_SUBLAYER_GUID,
                         &format!("DNS allow {ip_str}/UDP"),
                         W_DNS_PERMIT,
                         addr,
@@ -444,7 +444,7 @@ fn enable_blocking(
                     )?;
                     e.add_filter_allow_v4_addr_port_proto(
                         FWPM_LAYER_ALE_AUTH_CONNECT_V4,
-                        NEMEFISTO_SUBLAYER_GUID,
+                        ARIY_SUBLAYER_GUID,
                         &format!("DNS allow {ip_str}/TCP"),
                         W_DNS_PERMIT,
                         addr,
@@ -461,7 +461,7 @@ fn enable_blocking(
             for layer in [FWPM_LAYER_ALE_AUTH_CONNECT_V4, FWPM_LAYER_ALE_AUTH_CONNECT_V6] {
                 e.add_filter_block_port_proto(
                     layer,
-                    NEMEFISTO_SUBLAYER_GUID,
+                    ARIY_SUBLAYER_GUID,
                     "DNS block 53/UDP",
                     W_DNS_BLOCK,
                     53,
@@ -469,7 +469,7 @@ fn enable_blocking(
                 )?;
                 e.add_filter_block_port_proto(
                     layer,
-                    NEMEFISTO_SUBLAYER_GUID,
+                    ARIY_SUBLAYER_GUID,
                     "DNS block 53/TCP",
                     W_DNS_BLOCK,
                     53,

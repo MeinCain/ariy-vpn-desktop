@@ -44,20 +44,29 @@
   "welcome": {
     "tag": "connect in a minute",
     "title": "sign in to ariy vpn",
+    "heroSubtitle": "One-click connect — no copying links or fiddling with settings",
     "desc": {
       "before": "paste your subscription URL (looks like",
       "after": "), the app will fetch the server list and ping each one."
     },
     "load": "load",
-    "dropHint": "or just drop a link from your browser here",
+    "dropHint": "or drop a link from your browser here",
     "login": {
       "intro": "sign in with email and password — the app will fetch your subscription automatically.",
       "emailPlaceholder": "email",
       "passwordPlaceholder": "password",
       "submit": "sign in",
-      "register": "no account? sign up in the cabinet",
-      "useSubUrl": "i have a direct subscription URL",
+      "register": "No account? Sign up",
+      "useSubUrl": "Use subscription URL",
       "backToEmail": "← back to email sign-in",
+      "tg": "Sign in with Telegram",
+      "email": "Sign in with email",
+      "subUrl": "Use subscription URL",
+      "or": "or",
+      "tgPending": "Open the bot and confirm sign-in",
+      "tgPendingHint": "We'll continue automatically once you tap 'Confirm' in the bot.",
+      "tgReopen": "Open bot again",
+      "tgCancel": "Cancel",
       "err": {
         "invalidCredentials": "invalid email or password",
         "rateLimited": "too many attempts, please wait a minute",

@@ -1,6 +1,6 @@
 [package]
 name = "vpn-client"
-version = "0.2.0-beta.1"
+version = "0.2.0-beta.3"
 description = "Ariy VPN desktop client"
 authors = ["Ariy VPN"]
 edition = "2021"
@@ -19,7 +19,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri = { version = "2.11", features = ["tray-icon", "image-png"] }
 tauri-plugin-opener = "2"
 tauri-plugin-deep-link = "2"
 tauri-plugin-global-shortcut = "2"
@@ -43,6 +43,11 @@ tauri-plugin-process = "2"
 # Action Center когда окно свёрнуто/в трее. При видимом окне используем
 # in-app Toaster — нативные нужны именно когда юзер не смотрит на app.
 tauri-plugin-notification = "2"
+# HTTP-плагин — для frontend'а: fetch к api.example.com из WebView с
+# обходом CORS-preflight. WebView2 origin = `tauri://localhost`, и
+# обычный window.fetch падает с TypeError: Failed to fetch если бэк не
+# разрешает этот origin. Плагин делает запрос из Rust → CORS не применяется.
+tauri-plugin-http = "2"
 serde_yaml = "0.9.34"
 base64 = "0.22.1"
 uuid = { version = "1.23.1", features = ["v4"] }
