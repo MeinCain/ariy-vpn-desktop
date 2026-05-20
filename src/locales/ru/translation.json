@@ -955,5 +955,11 @@
     "giftAria": "Подарок: подарить подписку близким",
     "logoutAria": "Выйти из аккаунта"
   },
-  "statusLineLabel": "Статус:"
+  "statusLineLabel": "Статус:",
+  "compactSub": {
+    "tariff": "Тариф:",
+    "traffic": "Трафик:",
+    "daysLeft": "Осталось: {{days}} дн.",
+    "untilDate": "До: {{date}}"
+  }
 }

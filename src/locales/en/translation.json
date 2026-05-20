@@ -940,5 +940,11 @@
     "giftAria": "Gift: gift subscription to a friend",
     "logoutAria": "Sign out"
   },
-  "statusLineLabel": "Status:"
+  "statusLineLabel": "Status:",
+  "compactSub": {
+    "tariff": "Plan:",
+    "traffic": "Traffic:",
+    "daysLeft": "{{days}} days left",
+    "untilDate": "Until: {{date}}"
+  }
 }

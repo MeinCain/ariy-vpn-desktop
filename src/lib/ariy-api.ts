@@ -158,8 +158,24 @@ export type AriyMe = {
  * Возвращает строку sub_url или null если что-то пошло не так.
  */
 export async function apiFetchSubUrl(sessionToken: string): Promise<string | null> {
+  const me = await apiFetchAuthMe(sessionToken);
+  return me?.sub_url ?? null;
+}
+
+export type AriyAuthMe = {
+  telegram_id: number | null;
+  email: string | null;
+  subscription_active: boolean;
+  sub_url: string | null;
+  /** Plan / тариф name из cabinet, например "VIP". May be null. */
+  plan: string | null;
+};
+
+/** Полный `/v1/auth/me` response. Нужен для подтягивания тарифа +
+ *  sub_url одним запросом. */
+export async function apiFetchAuthMe(sessionToken: string): Promise<AriyAuthMe | null> {
   if (!sessionToken) return null;
-  console.log("[ariy-api] auth/me (для sub_url) ->");
+  console.log("[ariy-api] auth/me ->");
   let r: Response;
   try {
     r = await fetch(`${API_BASE}/v1/auth/me`, {
@@ -175,7 +191,14 @@ export async function apiFetchSubUrl(sessionToken: string): Promise<string | nul
   if (!r.ok) return null;
   try {
     const body: any = await r.json();
-    return typeof body?.sub_url === "string" ? body.sub_url : null;
+    if (!body?.ok) return null;
+    return {
+      telegram_id: body.telegram_id ?? null,
+      email: body.email ?? null,
+      subscription_active: !!body.subscription_active,
+      sub_url: typeof body.sub_url === "string" ? body.sub_url : null,
+      plan: typeof body.plan === "string" && body.plan.trim() ? body.plan.trim() : null,
+    };
   } catch { return null; }
 }
 

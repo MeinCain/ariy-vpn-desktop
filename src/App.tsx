@@ -30,7 +30,7 @@ import { Header } from "./components/Header";
 import { PowerStack } from "./components/PowerStack";
 import { CurrentServerWidget } from "./components/CurrentServerWidget";
 import { CountryDrawer } from "./components/CountryDrawer";
-import { SubscriptionStrip } from "./components/SubscriptionStrip";
+import { CompactSubInfo } from "./components/CompactSubInfo";
 import { Welcome } from "./components/Welcome";
 import { BandwidthMeter } from "./components/BandwidthMeter";
 import { Toaster } from "./components/Toaster";
@@ -385,6 +385,17 @@ function App() {
     return () => window.clearInterval(id);
   }, [autoRefresh, effectiveRefreshHours, fetchSubscription]);
 
+  // Авто-пинг всех серверов раз в 60 секунд. Юзер хочет всегда свежие
+  // ping-значения для определения цвета точки availability в drawer'е.
+  // Skip если pingAll уже идёт — внутренний guard в subscriptionStore.
+  useEffect(() => {
+    if (servers.length === 0) return;
+    const id = window.setInterval(() => {
+      void pingAll();
+    }, 60_000);
+    return () => window.clearInterval(id);
+  }, [servers.length, pingAll]);
+
   const isBusy = status === "starting" || status === "stopping";
   const isRunning = status === "running";
   const canConnect = selectedIndex !== null && !isBusy;
@@ -398,14 +409,20 @@ function App() {
           <AnnounceBanner />
           <Header onOpenSettings={() => setSettingsOpen(true)} />
 
-          {/* SubscriptionStrip: компактная плашка с тарифом / трафиком /
-              сроком + gift / × прямо под шапкой. Видна только когда у
-              юзера есть подписка (servers.length > 0). */}
-          {hasSubscription && <SubscriptionStrip />}
-
           <div className="main-grid">
             <div className="grid-power">
               <PowerStack canConnect={canConnect} />
+              {/* Под power-кнопкой: брендовый девиз → компактная инфо о
+                  подписке (тариф/трафик/срок) — обе видны только когда
+                  у юзера уже есть подписка. */}
+              {hasSubscription && (
+                <>
+                  <div className="ariy-tagline">
+                    Be fast. <span className="ariy-tagline-accent">Be stealthy.</span> Be free.
+                  </div>
+                  <CompactSubInfo />
+                </>
+              )}
             </div>
             <div className="grid-servers">
               {hasSubscription ? (

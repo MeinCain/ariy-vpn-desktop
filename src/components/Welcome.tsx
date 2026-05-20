@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useSubscriptionStore } from "../stores/subscriptionStore";
 import { useAuthStore } from "../stores/authStore";
-import { apiFetchSubUrl } from "../lib/ariy-api";
+import { apiFetchAuthMe } from "../lib/ariy-api";
 import { DASHBOARD_URL } from "../lib/constants";
 
 /**
@@ -53,17 +53,27 @@ export function Welcome() {
   useEffect(() => {
     if (sessionToken && sessionToken !== lastSessionToken.current) {
       lastSessionToken.current = sessionToken;
-      console.log("[Welcome] login OK, fetching sub_url...");
+      console.log("[Welcome] login OK, fetching /v1/auth/me...");
       void (async () => {
-        const sub = await apiFetchSubUrl(sessionToken);
+        // Один вызов /v1/auth/me — берём sub_url для подписки + plan/
+        // email/telegram_id для authStore (для compact-sub-info).
+        const me = await apiFetchAuthMe(sessionToken);
+        if (me) {
+          useAuthStore.setState({
+            plan: me.plan,
+            email: me.email,
+            telegramId: me.telegram_id,
+          });
+        }
+        const sub = me?.sub_url ?? null;
         if (sub) {
           console.log("[Welcome] got sub_url, auto-filling");
           setSubUrl(sub);
           void fetchSubscription();
         } else {
-          console.warn("[Welcome] sub_url endpoint вернул null — fallback на ручной ввод");
+          console.warn("[Welcome] /v1/auth/me вернул sub_url=null — fallback на ручной ввод");
           setEmailError(
-            "Вы вошли. Не удалось автоматически получить ссылку подписки — backend endpoint /v1/auth/sub_url ещё не задеплоен. Скопируйте её из кабинета вручную."
+            "Вы вошли. Не удалось автоматически получить ссылку подписки. Скопируйте её из кабинета вручную."
           );
           setExpand("sub-url");
         }

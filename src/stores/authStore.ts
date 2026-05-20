@@ -2,6 +2,7 @@ import { create } from "zustand";
 import {
   apiEmailLogin,
   apiLogout,
+  apiFetchAuthMe,
   telegramStart,
   telegramPoll,
   AriyApiError,
@@ -46,6 +47,12 @@ export type AuthState = {
   /** Активная TG-сессия (мы поднимаем polling каждые 3 сек). */
   tg: TgLoginState | null;
 
+  // Данные юзера из /v1/auth/me (best-effort, могут быть null если бэк
+  // unreachable или сессия экспайрилась).
+  plan: string | null;
+  email: string | null;
+  telegramId: number | null;
+
   loginEmail: (email: string, password: string) => Promise<LoginResult>;
   /** Старт TG flow + polling. */
   startTelegramLogin: () => Promise<LoginResult>;
@@ -53,6 +60,9 @@ export type AuthState = {
   cancelTelegramLogin: () => void;
   /** Locally logout + best-effort server invalidation. */
   logout: () => Promise<void>;
+  /** Подтянуть plan / email / telegram_id с auth-api. Идемпотентен —
+   *  безопасно дёргать после каждого login'а и при mount'е приложения. */
+  loadMe: () => Promise<void>;
 };
 
 const initial = loadPersisted();
@@ -69,6 +79,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   sessionToken: initial.sessionToken,
   busy: false,
   tg: null,
+  plan: null,
+  email: null,
+  telegramId: null,
+
+  async loadMe() {
+    const token = get().sessionToken;
+    if (!token) return;
+    const me = await apiFetchAuthMe(token);
+    if (!me) return;
+    set({
+      plan: me.plan,
+      email: me.email,
+      telegramId: me.telegram_id,
+    });
+  },
 
   async loginEmail(email, password) {
     console.log("[authStore] loginEmail start");
@@ -147,7 +172,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   async logout() {
     const token = get().sessionToken;
     stopTgPoll();
-    set({ sessionToken: null, tg: null });
+    set({ sessionToken: null, tg: null, plan: null, email: null, telegramId: null });
     persist({ sessionToken: null });
     if (token) await apiLogout(token);
   },

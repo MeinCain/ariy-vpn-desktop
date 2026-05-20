@@ -525,12 +525,51 @@ input, textarea { font: inherit; cursor: text; }
   color: var(--fg-dim);
   margin-top: 8px;
   text-align: center;
+  font-weight: 400;
 }
-.status-line-label { color: var(--fg-dim); }
-.status-line-state { color: var(--fg); font-weight: 600; }
-.status-line-state.is-running { color: var(--accent); }
+.status-line-label { color: var(--fg-dim); font-weight: 400; }
+.status-line-state { color: var(--fg); font-weight: 500; }
+/* «Подключено» — зелёный, как просил юзер (точка-индикатор успеха). */
+.status-line-state.is-running { color: #22c55e; }
 .status-line-state.is-busy { color: var(--accent-2); }
 .status-line-state.is-error { color: var(--warn); }
+
+/* ── Tagline «Be fast. Be stealthy. Be free.» под power-кнопкой ──── */
+.ariy-tagline {
+  margin-top: 6px;
+  text-align: center;
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fg-dim);
+  letter-spacing: 0.01em;
+}
+.ariy-tagline-accent { color: var(--accent); }
+
+/* ── CompactSubInfo — одна строка тариф/трафик/срок ─────────────────── */
+.compact-sub-info {
+  margin: 6px auto 2px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 8px;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fg-dim);
+  max-width: 95%;
+}
+.compact-sub-info .csi-label { opacity: 0.7; }
+.compact-sub-info .csi-value { color: var(--fg); }
+.compact-sub-info .csi-sep { opacity: 0.35; }
+
+/* ── Gift-кнопка в Header — фирменный синий gradient ───────────────── */
+.icon-btn-gift {
+  background: linear-gradient(155deg, #3b82f6 0%, #1b3486 100%);
+  border-color: rgba(59, 130, 246, 0.55) !important;
+  color: #fff !important;
+}
+.icon-btn-gift:hover { filter: brightness(1.15); }
 
 /* ── CurrentServerWidget — большая plate-кнопка с флагом + страной ─── */
 .current-server-widget {

@@ -38,8 +38,15 @@ export function flagEmojiToCode(emoji: string | null | undefined): string | null
   return String.fromCharCode(a, b).toLowerCase();
 }
 
-/** Путь к SVG-флагу в bundle или null если не нашли. */
+/** Путь к SVG-флагу в bundle или null если не нашли.
+ *
+ *  Особый случай — синтетическая нода «Fastest» (EU-aggregate): юзер
+ *  попросил флаг Европейского союза. Возвращаем `/flags/eu.svg` ещё до
+ *  попытки парсить regional-indicator codepoints. */
 export function flagSvgPath(emojiOrText: string | null | undefined): string | null {
+  if (emojiOrText && /fastest|самый\s*быстрый/i.test(emojiOrText)) {
+    return "/flags/eu.svg";
+  }
   const emoji = extractFlagEmoji(emojiOrText);
   const code = flagEmojiToCode(emoji);
   if (!code) return null;

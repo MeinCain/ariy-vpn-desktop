@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useVpnStore } from "../stores/vpnStore";
 import { useSubscriptionStore } from "../stores/subscriptionStore";
 import { flagSvgPath, stripFlagFromName } from "../lib/flags";
+import { sortIndicesByCanonical } from "../lib/canonicalOrder";
 import { PingBadge } from "./PingBadge";
 
 type Props = {
@@ -56,6 +57,12 @@ export function CountryDrawer({ open, onClose }: Props) {
   const availableCount = pings.filter(
     (ms) => ms != null && ms >= 0
   ).length;
+  // Canonical-sorted indices — порядок зафиксирован в lib/canonicalOrder.ts
+  // и не зависит от пинга. Юзер прямо просил «больше не меняться».
+  const sortedIndices = useMemo(
+    () => sortIndicesByCanonical(servers),
+    [servers]
+  );
 
   return createPortal(
     <div
@@ -91,15 +98,21 @@ export function CountryDrawer({ open, onClose }: Props) {
           {servers.length === 0 && (
             <div className="country-drawer-empty">{t("countryDrawer.empty")}</div>
           )}
-          {servers.map((entry, i) => {
+          {sortedIndices.map((i) => {
+            const entry = servers[i];
+            if (!entry) return null;
             const ping = pings[i];
             const flagPath = flagSvgPath(entry.name);
             const cleanName = stripFlagFromName(entry.name);
             const isSelected = selectedIndex === i;
+            // Пороги доступности (юзер v0.2.0-beta.13):
+            //   <150 ms     → зелёная точка (быстро)
+            //   150-300 ms  → жёлтая (заметная задержка)
+            //   ≥300 ms / null → красная (медленно / нет ответа)
             const availClass = (() => {
               if (ping == null) return "avail-red";
-              if (ping < 80) return "avail-green";
-              if (ping < 200) return "avail-yellow";
+              if (ping < 150) return "avail-green";
+              if (ping < 300) return "avail-yellow";
               return "avail-red";
             })();
             return (

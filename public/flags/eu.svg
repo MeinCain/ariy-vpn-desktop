@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 810 540">
+  <rect width="810" height="540" fill="#003399"/>
+  <g fill="#FFCC00">
+    <g id="s"><g id="c"><path id="t" d="M0,-30 8.817,-2.871 0,-9.27 -8.817,-2.871z"/><use href="#t" transform="rotate(72)"/></g><use href="#c" transform="rotate(144)"/><use href="#c" transform="rotate(216)"/><use href="#c" transform="rotate(288)"/></g>
+    <use href="#s" transform="translate(405,135)"/>
+    <use href="#s" transform="translate(405,405)"/>
+    <use href="#s" transform="translate(270,180)"/>
+    <use href="#s" transform="translate(540,180)"/>
+    <use href="#s" transform="translate(270,360)"/>
+    <use href="#s" transform="translate(540,360)"/>
+    <use href="#s" transform="translate(189,270)"/>
+    <use href="#s" transform="translate(621,270)"/>
+    <use href="#s" transform="translate(229.5,202.5)"/>
+    <use href="#s" transform="translate(580.5,202.5)"/>
+    <use href="#s" transform="translate(229.5,337.5)"/>
+    <use href="#s" transform="translate(580.5,337.5)"/>
+  </g>
+</svg>

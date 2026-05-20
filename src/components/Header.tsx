@@ -1,34 +1,37 @@
 import { useTranslation } from "react-i18next";
-import { useUtcClock } from "../lib/hooks/useUtcClock";
-import { openSupport } from "../lib/openExternal";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { openDashboard, openSupport } from "../lib/openExternal";
 import { useSubscriptionStore } from "../stores/subscriptionStore";
+import { DASHBOARD_URL } from "../lib/constants";
 import { SettingsIcon, SupportIcon } from "./icons";
 
 /**
- * Шапка приложения: лого + UTC-часы + + (добавить подписку) +
- * кнопки личного кабинета и настроек.
+ * Шапка приложения: лого + ряд icon-кнопок справа:
+ * [+ добавить sub] [🎁 подарок] [👤 кабинет] [✈ поддержка] [⚙ настройки].
+ * UTC-часы и blink-точка убраны — юзер просил «убрать Active вверху».
  */
 export function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
   const { t } = useTranslation();
-  const utcTime = useUtcClock();
-  // 0.3.0: + кнопка для добавления подписки. Видна только когда уже есть
-  // хотя бы одна (subscriptions[].length > 0). При первом запуске (Welcome)
-  // прятать — там и так центральная форма ввода URL.
   const hasAnySubscription = useSubscriptionStore(
     (s) => s.subscriptions.length > 0 || s.url.trim() !== ""
   );
 
+  const onGift = () => {
+    void openUrl(DASHBOARD_URL.replace(/\/+$/, "") + "/gift");
+  };
+
   return (
     <header className="header">
-      <div className="header-logo">
+      <button
+        type="button"
+        className="header-logo"
+        onClick={() => void openUrl("https://example.com")}
+        aria-label="Ariy VPN"
+      >
         <img src="/logo.png" alt="" />
         <span>ariy vpn</span>
-      </div>
+      </button>
       <div className="header-right">
-        <div className="header-meta">
-          <span className="blink">●</span>
-          <span>{utcTime}</span>
-        </div>
         {hasAnySubscription && (
           <button
             type="button"
@@ -56,6 +59,35 @@ export function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
             </svg>
           </button>
         )}
+        {hasAnySubscription && (
+          <button
+            type="button"
+            className="icon-btn icon-btn-gift"
+            onClick={onGift}
+            aria-label={t("subStrip.giftAria")}
+            title={t("subStrip.giftAria")}
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 12 20 22 4 22 4 12" />
+              <rect x="2" y="7" width="20" height="5" />
+              <line x1="12" y1="22" x2="12" y2="7" />
+              <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
+              <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+            </svg>
+          </button>
+        )}
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={openDashboard}
+          aria-label={t("header.dashboard")}
+          title={t("header.dashboard")}
+        >
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+        </button>
         <button
           type="button"
           className="icon-btn"
