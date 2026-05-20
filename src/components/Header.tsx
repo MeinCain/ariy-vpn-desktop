@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { openDashboard, openSupport } from "../lib/openExternal";
+import { openSupport } from "../lib/openExternal";
 import { useSubscriptionStore } from "../stores/subscriptionStore";
 import { DASHBOARD_URL } from "../lib/constants";
 import { SettingsIcon, SupportIcon } from "./icons";
@@ -76,18 +76,6 @@ export function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
             </svg>
           </button>
         )}
-        <button
-          type="button"
-          className="icon-btn"
-          onClick={openDashboard}
-          aria-label={t("header.dashboard")}
-          title={t("header.dashboard")}
-        >
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-          </svg>
-        </button>
         <button
           type="button"
           className="icon-btn"

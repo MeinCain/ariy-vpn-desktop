@@ -38,6 +38,7 @@ import { runLeakTest } from "./lib/leakTest";
 import { ModeSegment } from "./components/ModeSegment";
 import { Footer } from "./components/Footer";
 import { SettingsPage } from "./components/SettingsPage";
+import { openDashboard } from "./lib/openExternal";
 
 /**
  * Корневой компонент. Координирует:
@@ -450,6 +451,22 @@ function App() {
               </div>
             )}
           </div>
+
+          {/* Кнопка «Личный кабинет →» над футером — юзер просил вернуть
+              именно это место (раньше она была в App.tsx до beta.12,
+              ошибочно убрал её в UI-rework'е). Открывает cabinet.example.com
+              через openDashboard() — захардкоженный URL, не зависит от
+              `profile-web-page-url` из подписки. */}
+          {hasSubscription && (
+            <button
+              type="button"
+              onClick={openDashboard}
+              className="dashboard-link"
+            >
+              <span>{t("header.dashboard")}</span>
+              <span className="dashboard-link-arrow">→</span>
+            </button>
+          )}
 
           <Footer />
         </div>
