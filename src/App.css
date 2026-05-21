@@ -717,7 +717,10 @@ input, textarea { font: inherit; cursor: text; }
 }
 .country-list-close:hover { border-color: var(--warn); color: var(--warn); }
 .country-list-items {
-  max-height: 320px;
+  /* Раньше 320px — на скрине референса юзер хотел чтобы шторка
+     занимала бОльшую часть окна. 64dvh = ~500px при 780px-окне,
+     остаётся место для sub-strip сверху и footer снизу. */
+  max-height: 64dvh;
   overflow-y: auto;
   padding: 6px 4px 8px;
 }

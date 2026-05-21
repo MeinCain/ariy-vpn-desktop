@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Ariy VPN",
-  "version": "0.2.0-beta.22",
+  "version": "0.2.0-beta.23",
   "identifier": "com.ariyvpn.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -13,10 +13,14 @@
     "windows": [
       {
         "title": "Ariy VPN",
-        "width": 460,
-        "height": 920,
+        "width": 420,
+        "height": 780,
         "minWidth": 420,
-        "minHeight": 760
+        "minHeight": 780,
+        "maxWidth": 420,
+        "maxHeight": 780,
+        "resizable": false,
+        "maximizable": false
       }
     ],
     "security": {

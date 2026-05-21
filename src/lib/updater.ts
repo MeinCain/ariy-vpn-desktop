@@ -61,7 +61,9 @@ export async function downloadAndInstall(
   let downloaded = 0;
   let total = 0;
 
-  await update.handle.downloadAndInstall((event) => {
+  // ── Шаг 1: download (без install). Файлы скачаны в Temp, ничего не
+  //   тронуто в %LOCALAPPDATA%\Ariy VPN\. Можно спокойно дисконнектить.
+  await update.handle.download((event) => {
     switch (event.event) {
       case "Started":
         total = event.data.contentLength ?? 0;
@@ -79,62 +81,27 @@ export async function downloadAndInstall(
     }
   });
 
-  // 0.3.2 / sing-box file-lock fix: перед shutdown'ом helper'а нужно
-  // полноценно дисконнектить VPN — иначе sing-box (либо как Tauri
-  // sidecar в proxy-mode, либо как SYSTEM-spawned child helper'а в
-  // TUN-mode) продолжит работать как orphan-процесс и залочит свой
-  // .exe. NSIS installer не сможет перезаписать `sing-box-*.exe`.
-  //
-  // `disconnect` грациозно стопит ОБА движка через нормальный pipeline
-  // (sing_box::stop / mihomo::stop в commands.rs). После этого sing-box
-  // и mihomo .exe-файлы свободны для перезаписи installer'ом.
-  try {
-    await invoke("disconnect");
-  } catch (e) {
-    // Если disconnect упал — продолжаем. Возможно VPN уже отключён,
-    // либо помешал internal error. NSIS hook (Fix C / installer-hooks.nsh)
-    // и helper-side stop_self с stop'ом детей (Fix 2) — defensive backup.
-    console.warn("[updater] disconnect failed:", e);
-  }
+  // ── Шаг 2: ДО запуска NSIS (которое начнёт перезаписывать файлы)
+  //   грациозно стопим VPN и helper. Это критично — sing-box.exe и
+  //   ariy-helper.exe держат open handle на свои бинарики до exit'а.
+  //   В прежней реализации disconnect/shutdown вызывались ПОСЛЕ
+  //   downloadAndInstall, что слишком поздно — installer уже падал
+  //   на «Невозможно открыть файл».
+  try { await invoke("disconnect"); }
+  catch (e) { console.warn("[updater] disconnect failed:", e); }
+  await new Promise((r) => setTimeout(r, 800));
+
+  try { await invoke("shutdown_helper"); }
+  catch (e) { console.warn("[updater] shutdown_helper failed:", e); }
   await new Promise((r) => setTimeout(r, 1500));
 
-  // 0.3.1 / installer file-lock fix: перед перезапуском (которое
-  // запускает NSIS installer в passive mode) грациозно стопим helper.
-  // Иначе NSIS не сможет перезаписать `ariy-helper.exe` (Windows
-  // service держит open handle на файл) → "невозможно открыть файл для
-  // записи" + abort. Helper после этого недоступен ~до первого connect,
-  // там helper_bootstrap поднимет его заново.
-  //
-  // 0.3.2: helper при ShutdownHelper также стопит своих детей
-  // (sing-box, mihomo) — на случай если frontend disconnect выше
-  // не отработал и helper остался с running child'ами.
-  //
-  // Ждём ~1.5с после команды чтобы SCM успел маршрутизировать
-  // SERVICE_CONTROL_STOP, helper'у завершить pipe-loop и SCM пометить
-  // сервис STOPPED. Эмпирически 200мс задержки внутри helper'а + ~300мс
-  // на pipe-disconnect и SCM-state-update должно укладываться, но
-  // 1500мс — щедрый запас на медленных машинах.
-  try {
-    await invoke("shutdown_helper");
-  } catch (e) {
-    // Не критично: если helper уже не работает или pipe сломан — мы
-    // всё равно идём дальше. NSIS попытается перезаписать, и в худшем
-    // случае пользователь увидит тот же диалог что и раньше — это не
-    // регрессия по сравнению с поведением до фикса.
-    console.warn("[updater] shutdown_helper failed:", e);
-  }
-  await new Promise((r) => setTimeout(r, 1500));
-
-  // 0.3.3 fix: ещё ~300мс на дренаж IPC-очереди фронта. Subscription
-  // store может иметь in-flight `secure_storage_set` (URL подписки),
-  // которые если не успели долететь до Rust до relaunch'а — теряются,
-  // и при следующем старте URL «исчезает» (loadSecureCreds не находит
-  // запись в keyring, а индекс в localStorage уже есть → корявое
-  // состояние). 300мс — короткое окно, юзер уже видит progress NSIS.
+  // ── Шаг 3: дренаж IPC + install. install() запустит NSIS, который
+  //   relaunch'ит app сам. До запуска NSIS даём фронту ~300мс чтобы
+  //   in-flight secure_storage_set долетели до Rust (иначе URL подписки
+  //   может теряться при relaunch'е).
   await new Promise((r) => setTimeout(r, 300));
-
-  // installMode=passive в tauri.conf.json — NSIS запускается с минимумом
-  // UI и сам перезапускает app, но Tauri рекомендует звать relaunch()
-  // на случай если NSIS не успел перехватить.
+  await update.handle.install();
+  // installMode=passive — NSIS обычно сам relaunch'ит. relaunch ниже
+  // как defensive fallback на случай если NSIS не успел.
   await relaunch();
 }
