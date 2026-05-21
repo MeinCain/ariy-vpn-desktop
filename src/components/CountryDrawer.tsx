@@ -5,7 +5,7 @@ import { useSubscriptionStore } from "../stores/subscriptionStore";
 import { flagSvgPath, stripFlagFromName } from "../lib/flags";
 import { localizeCountryName } from "../lib/countryNames";
 import { sortIndicesByCanonical } from "../lib/canonicalOrder";
-import { PingBadge } from "./PingBadge";
+import { SignalBars } from "./SignalBars";
 
 type Props = {
   open: boolean;
@@ -13,11 +13,14 @@ type Props = {
 };
 
 /**
- * Список стран — раскрывается inline ПОД CurrentServerWidget'ом через
- * grid-template-rows 0fr ↔ 1fr транзишн (тот же паттерн, который
- * работал в ServerSelector до beta.12). Drawer ВСЕГДА в DOM —
- * переключение только CSS-классом is-open, без условного render'а.
- * Это уберёт «пустую страницу» в Tauri WebView2.
+ * Bottom-sheet шторка со списком стран. Реализована через
+ * `position: absolute` внутри `.frame` (НЕ fixed, НЕ portal) — это
+ * единственный надёжный способ для Tauri WebView2 в production-сборке,
+ * проверенный в beta.24 после серии провалов с fixed+portal+blur.
+ *
+ * Когда open=true — рендерится absolute-overlay поверх всего main-grid'а,
+ * с drawer-блоком в нижней части окна. Handle сверху, head с заголовком
+ * и счётчиком, scrollable-список стран ниже.
  */
 export function CountryDrawer({ open, onClose }: Props) {
   const { t, i18n } = useTranslation();
@@ -50,88 +53,86 @@ export function CountryDrawer({ open, onClose }: Props) {
     [servers]
   );
 
+  if (!open) return null;
+
   const isBusy = status === "starting" || status === "stopping";
   const availableCount = pings.filter((ms) => ms != null && ms >= 0).length;
 
   return (
     <div
-      className={`country-list-drawer${open ? " is-open" : ""}`}
-      aria-hidden={!open}
+      className="country-sheet-backdrop"
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
     >
-      <div className="country-list-drawer-inner">
-        <div className="country-list">
-          <div className="country-list-head">
-            <h3 className="country-list-title">{t("countryDrawer.title")}</h3>
-            <span className="country-list-meta">
-              <span className="avail-dot avail-green" aria-hidden />
-              {t("countryDrawer.count", {
-                available: availableCount,
-                total: servers.length,
-              })}
-            </span>
-            <button
-              type="button"
-              className="country-list-close"
-              onClick={onClose}
-              aria-label={t("countryDrawer.close")}
-              title={t("countryDrawer.close")}
-            >
-              ×
-            </button>
-          </div>
-          <div className="country-list-items">
-            {servers.length === 0 && (
-              <div className="country-list-empty">{t("countryDrawer.empty")}</div>
-            )}
-            {sortedIndices.map((i) => {
-              const entry = servers[i];
-              if (!entry) return null;
-              const ping = pings[i];
-              const flagPath = flagSvgPath(entry.name);
-              const cleanName = localizeCountryName(
-                stripFlagFromName(entry.name),
-                i18n.language
-              );
-              const isSelected = selectedIndex === i;
-              const availClass = (() => {
-                if (ping == null) return "avail-red";
-                if (ping < 150) return "avail-green";
-                if (ping < 300) return "avail-yellow";
-                return "avail-red";
-              })();
-              return (
-                <button
-                  key={`${entry.name}-${i}`}
-                  type="button"
-                  className={`country-row${isSelected ? " is-selected" : ""}`}
-                  disabled={isBusy}
-                  tabIndex={open ? 0 : -1}
-                  onClick={() => {
-                    selectServer(i);
-                    onClose();
-                  }}
-                >
-                  {flagPath ? (
-                    <img
-                      className="country-row-flag"
-                      src={flagPath}
-                      alt=""
-                      width={26}
-                      height={20}
-                    />
-                  ) : (
-                    <span
-                      className="country-row-flag country-row-flag-placeholder"
-                      aria-hidden
-                    />
-                  )}
-                  <span className="country-row-name">{cleanName}</span>
-                  <PingBadge ms={ping} loading={pingsLoading} />
-                  <span className={`avail-dot ${availClass}`} aria-hidden />
-                </button>
-              );
+      <div
+        className="country-sheet"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="country-sheet-handle" aria-hidden />
+        <div className="country-sheet-head">
+          <h3 className="country-sheet-title">{t("countryDrawer.title")}</h3>
+          <span className="country-sheet-meta">
+            <span className="country-sheet-meta-dot" aria-hidden />
+            {t("countryDrawer.count", {
+              available: availableCount,
+              total: servers.length,
             })}
-          </div>
+          </span>
+          <button
+            type="button"
+            className="country-sheet-close"
+            onClick={onClose}
+            aria-label={t("countryDrawer.close")}
+            title={t("countryDrawer.close")}
+          >
+            ×
+          </button>
+        </div>
+        <div className="country-sheet-list">
+          {servers.length === 0 && (
+            <div className="country-sheet-empty">{t("countryDrawer.empty")}</div>
+          )}
+          {sortedIndices.map((i) => {
+            const entry = servers[i];
+            if (!entry) return null;
+            const ping = pings[i];
+            const flagPath = flagSvgPath(entry.name);
+            const cleanName = localizeCountryName(
+              stripFlagFromName(entry.name),
+              i18n.language
+            );
+            const isSelected = selectedIndex === i;
+            return (
+              <button
+                key={`${entry.name}-${i}`}
+                type="button"
+                className={`country-sheet-row${isSelected ? " is-selected" : ""}`}
+                disabled={isBusy}
+                onClick={() => {
+                  selectServer(i);
+                  onClose();
+                }}
+              >
+                {flagPath ? (
+                  <img
+                    className="country-sheet-flag"
+                    src={flagPath}
+                    alt=""
+                    width={26}
+                    height={20}
+                  />
+                ) : (
+                  <span
+                    className="country-sheet-flag country-sheet-flag-placeholder"
+                    aria-hidden
+                  />
+                )}
+                <span className="country-sheet-name">{cleanName}</span>
+                <SignalBars ms={ping} />
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

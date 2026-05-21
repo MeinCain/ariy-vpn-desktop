@@ -3,7 +3,7 @@ import { useVpnStore } from "../stores/vpnStore";
 import { useSubscriptionStore } from "../stores/subscriptionStore";
 import { flagSvgPath, stripFlagFromName } from "../lib/flags";
 import { localizeCountryName } from "../lib/countryNames";
-import { PingBadge } from "./PingBadge";
+import { SignalBars } from "./SignalBars";
 
 /**
  * Большая plate-кнопка с флагом + страной + пингом + chevron'ом.
@@ -18,7 +18,6 @@ export function CurrentServerWidget({ onPick }: { onPick: () => void }) {
   const selectedIndex = useVpnStore((s) => s.selectedIndex);
   const servers = useSubscriptionStore((s) => s.servers);
   const pings = useSubscriptionStore((s) => s.pings);
-  const pingsLoading = useSubscriptionStore((s) => s.pingsLoading);
 
   const entry = selectedIndex !== null ? servers[selectedIndex] : null;
   const ping = selectedIndex !== null ? pings[selectedIndex] : undefined;
@@ -56,7 +55,7 @@ export function CurrentServerWidget({ onPick }: { onPick: () => void }) {
         <span className="csw-flag-placeholder" aria-hidden>·</span>
       )}
       <span className="csw-name">{cleanName}</span>
-      <PingBadge ms={ping} loading={pingsLoading} />
+      <SignalBars ms={ping} />
       <ChevronDown />
     </button>
   );
