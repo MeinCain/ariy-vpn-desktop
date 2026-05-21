@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useVpnStore } from "../stores/vpnStore";
 import { useSubscriptionStore } from "../stores/subscriptionStore";
 import { flagSvgPath, stripFlagFromName } from "../lib/flags";
+import { localizeCountryName } from "../lib/countryNames";
 import { sortIndicesByCanonical } from "../lib/canonicalOrder";
 import { PingBadge } from "./PingBadge";
 
@@ -19,7 +20,7 @@ type Props = {
  * Это уберёт «пустую страницу» в Tauri WebView2.
  */
 export function CountryDrawer({ open, onClose }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const status = useVpnStore((s) => s.status);
   const selectedIndex = useVpnStore((s) => s.selectedIndex);
   const selectServer = useVpnStore((s) => s.selectServer);
@@ -87,7 +88,10 @@ export function CountryDrawer({ open, onClose }: Props) {
               if (!entry) return null;
               const ping = pings[i];
               const flagPath = flagSvgPath(entry.name);
-              const cleanName = stripFlagFromName(entry.name);
+              const cleanName = localizeCountryName(
+                stripFlagFromName(entry.name),
+                i18n.language
+              );
               const isSelected = selectedIndex === i;
               const availClass = (() => {
                 if (ping == null) return "avail-red";

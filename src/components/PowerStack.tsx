@@ -49,7 +49,7 @@ export function PowerStack({ canConnect }: { canConnect: boolean }) {
       <div style={{ textAlign: "center" }}>
         <div className="status-line">
           <span className="status-line-label">{t("statusLineLabel", "Статус:")}</span>{" "}
-          <span className={`status-line-state ${POWER_LABEL_CLS[status]}`}>
+          <span className={`status-line-state is-${status} ${POWER_LABEL_CLS[status]}`}>
             {t(`status.label.${status}`)}
           </span>
         </div>

@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useVpnStore } from "../stores/vpnStore";
 import { useSubscriptionStore } from "../stores/subscriptionStore";
 import { flagSvgPath, stripFlagFromName } from "../lib/flags";
+import { localizeCountryName } from "../lib/countryNames";
 import { PingBadge } from "./PingBadge";
 
 /**
@@ -12,7 +13,7 @@ import { PingBadge } from "./PingBadge";
  * открывает drawer для смены.
  */
 export function CurrentServerWidget({ onPick }: { onPick: () => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const status = useVpnStore((s) => s.status);
   const selectedIndex = useVpnStore((s) => s.selectedIndex);
   const servers = useSubscriptionStore((s) => s.servers);
@@ -22,6 +23,9 @@ export function CurrentServerWidget({ onPick }: { onPick: () => void }) {
   const entry = selectedIndex !== null ? servers[selectedIndex] : null;
   const ping = selectedIndex !== null ? pings[selectedIndex] : undefined;
   const isBusy = status === "starting" || status === "stopping";
+  const cleanName = entry
+    ? localizeCountryName(stripFlagFromName(entry.name), i18n.language)
+    : "";
 
   if (!entry) {
     return (
@@ -38,7 +42,6 @@ export function CurrentServerWidget({ onPick }: { onPick: () => void }) {
   }
 
   const flagPath = flagSvgPath(entry.name);
-  const cleanName = stripFlagFromName(entry.name);
 
   return (
     <button

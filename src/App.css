@@ -471,7 +471,7 @@ input, textarea { font: inherit; cursor: text; }
    справа. Дизайн копирует Chrome-расширение Ariy. */
 .sub-strip {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto;
   align-items: center;
   gap: 10px;
   margin: 12px 0 8px;
