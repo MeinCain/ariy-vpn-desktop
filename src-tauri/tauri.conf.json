@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Ariy VPN",
-  "version": "0.2.0-beta.21",
+  "version": "0.2.0-beta.22",
   "identifier": "com.ariyvpn.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -35,6 +35,7 @@
       "active": true,
       "dialog": false,
       "endpoints": [
+        "https://api.example.com/v1/updater/latest.json",
         "https://github.com/MeinCain/ariy-vpn-desktop/releases/latest/download/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEI5NjVFOUMxREE0QzlGRDAKUldUUW4wemF3ZWxsdWJXaUtILzBBT2ZlcFpMQ3ZXNFc5eHpPYzR3SWpITTVvWHl4ckgxRFdVeVcK",

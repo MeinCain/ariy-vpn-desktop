@@ -463,7 +463,9 @@ input, textarea { font: inherit; cursor: text; }
   flex-direction: column;
   align-items: center;
   gap: 18px;
-  padding: 14px 0 8px;
+  /* padding-top урезан с 14 до 0, чтобы power-кнопка зрительно
+     поднялась ближе к sub-strip'у (юзер: «кнопку чуть повыше»). */
+  padding: 0 0 8px;
 }
 
 /* ── SubscriptionStrip — компактная инфо-плашка под Header ──────────
@@ -629,10 +631,11 @@ input, textarea { font: inherit; cursor: text; }
 }
 .csw-name {
   flex: 1;
+  text-align: left;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-weight: 600;
+  font-weight: 500;
 }
 .csw-empty {
   flex: 1;

@@ -15,9 +15,18 @@ export function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
   const hasAnySubscription = useSubscriptionStore(
     (s) => s.subscriptions.length > 0 || s.url.trim() !== ""
   );
+  const fetchSubscription = useSubscriptionStore((s) => s.fetchSubscription);
+  const pingAll = useSubscriptionStore((s) => s.pingAll);
+  const subLoading = useSubscriptionStore((s) => s.loading);
 
   const onGift = () => {
     void openUrl(DASHBOARD_URL.replace(/\/+$/, "") + "/gift");
+  };
+
+  const onRefresh = () => {
+    // Тянем свежий список серверов + пингаем — одна кнопка «обновить»
+    // на оба обряда.
+    void fetchSubscription().then(() => pingAll());
   };
 
   return (
@@ -35,15 +44,15 @@ export function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
         {hasAnySubscription && (
           <button
             type="button"
-            className="icon-btn"
-            onClick={() => {
-              window.dispatchEvent(
-                new CustomEvent("ariy:open-add-subscription")
-              );
-            }}
-            aria-label={t("header.addSubscription")}
-            title={t("header.addSubscription")}
+            className={`icon-btn${subLoading ? " is-loading" : ""}`}
+            onClick={onRefresh}
+            disabled={subLoading}
+            aria-label={t("header.refreshSubscription", "Обновить подписку")}
+            title={t("header.refreshSubscription", "Обновить подписку")}
           >
+            {/* ↻ — обновить список серверов и пинги. Заменил прежнюю
+                «+» кнопку (добавить subscription) — в TG-режиме add
+                делается через login, не вручную. */}
             <svg
               viewBox="0 0 24 24"
               width="14"
@@ -54,8 +63,9 @@ export function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
               strokeLinecap="round"
               strokeLinejoin="round"
             >
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="23 4 23 10 17 10" />
+              <polyline points="1 20 1 14 7 14" />
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
             </svg>
           </button>
         )}
