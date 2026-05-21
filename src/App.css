@@ -645,12 +645,28 @@ input, textarea { font: inherit; cursor: text; }
 }
 
 /* ── CountryDrawer — bottom-sheet со списком стран ──────────────────── */
-/* ── CountryDrawer (beta.18+) — inline expand под server-widget ─────
-   Никакого overlay, fixed-position, animation или backdrop-filter —
-   в production-сборке Tauri WebView2 такие трюки давали «пустую
-   страницу». Чистый block-flow с border'ом, надёжно рендерится. */
-.country-list {
+/* ── CountryDrawer (beta.19+) — grid-template-rows expand pattern ───
+   Тот же CSS-pattern, который работал в ServerSelector до beta.12.
+   Drawer всегда в DOM (никаких условных return null), переключение
+   только классом .is-open через `grid-template-rows: 0fr ↔ 1fr`.
+   В Tauri WebView2 этот pattern проверенно работает — никакой
+   «пустой страницы» больше быть не должно. */
+.country-list-drawer {
+  display: grid;
+  grid-template-rows: 0fr;
+  margin-top: 0;
+  transition: grid-template-rows 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              margin-top 0.3s ease;
+}
+.country-list-drawer.is-open {
+  grid-template-rows: 1fr;
   margin-top: 8px;
+}
+.country-list-drawer-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+.country-list {
   border: 1px solid var(--line-strong);
   border-radius: 12px;
   background: rgba(8, 11, 22, 0.65);
