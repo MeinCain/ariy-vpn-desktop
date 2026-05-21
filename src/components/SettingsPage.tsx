@@ -7,19 +7,10 @@ import { useVpnStore } from "../stores/vpnStore";
 import { useSubscriptionStore } from "../stores/subscriptionStore";
 import { useRuntimeStore } from "../stores/runtimeStore";
 import {
-  DEFAULT_USER_AGENT_MIHOMO,
-  DEFAULT_USER_AGENT_SINGBOX,
-  PRESET_BACKGROUND,
-  PRESET_BUTTON_STYLE,
   useSettingsStore,
   type AppRule,
   type AppRuleAction,
-  type Background,
-  type ButtonStyle,
   type Engine,
-  type Preset,
-  type SortMode,
-  type Theme,
 } from "../stores/settingsStore";
 import { APP_VERSION, GITHUB_URL, PRIVACY_URL, LICENSE_URL } from "../lib/constants";
 import { openDashboard, openSupport } from "../lib/openExternal";
@@ -33,7 +24,7 @@ import {
 import { showToast } from "../stores/toastStore";
 import { useUpdateStore } from "../stores/updateStore";
 import { checkForUpdates } from "../lib/updater";
-import { useEffectiveSettings } from "../lib/hooks/useEffectiveSettings";
+// useEffectiveSettings больше не используется (категория «Интерфейс» удалена в beta.21).
 import { Toggle } from "./Toggle";
 
 /**
@@ -51,13 +42,10 @@ import { Toggle } from "./Toggle";
  * чтобы не тащить ворох пропов в дочерние и сохранить хук-react state.
  */
 type SettingsCategory =
-  | "subscription"
-  | "connection"
   | "engine"
   | "tunnel"
   | "security"
   | "routing"
-  | "appearance"
   | "system";
 
 type CategoryMeta = {
@@ -72,19 +60,11 @@ type CategoryMeta = {
 /** Метаданные категорий для рендера CategoryList. Иконки — эмодзи
  *  (без зависимости от иконочных шрифтов). Описание — короткая фраза
  *  что внутри, чтобы пользователь не открывал каждую наугад. */
+// Категории Подписка / Подключение / Интерфейс убраны по запросу юзера.
+// JSX-блоки с их content'ом остаются в render-tree, но без id в этом
+// списке они недоступны из навигации (TypeScript narrows category type,
+// dead-блоки не вызывают ошибок — просто не отрисовываются).
 const CATEGORIES: CategoryMeta[] = [
-  {
-    id: "subscription",
-    icon: "📡",
-    titleKey: "settings.categories.subscription.title",
-    descKey: "settings.categories.subscription.desc",
-  },
-  {
-    id: "connection",
-    icon: "🔌",
-    titleKey: "settings.categories.connection.title",
-    descKey: "settings.categories.connection.desc",
-  },
   {
     id: "engine",
     icon: "⚙️",
@@ -110,12 +90,6 @@ const CATEGORIES: CategoryMeta[] = [
     descKey: "settings.categories.routing.desc",
   },
   {
-    id: "appearance",
-    icon: "🎨",
-    titleKey: "settings.categories.appearance.title",
-    descKey: "settings.categories.appearance.desc",
-  },
-  {
     id: "system",
     icon: "🔧",
     titleKey: "settings.categories.system.title",
@@ -126,24 +100,18 @@ const CATEGORIES: CategoryMeta[] = [
 export function SettingsPage({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const s = useSettingsStore();
-  const eff = useEffectiveSettings();
   const subUrl = useSubscriptionStore((x) => x.url);
   const subMeta = useSubscriptionStore((x) => x.meta);
-  const subHwid = useSubscriptionStore((x) => x.hwid);
-  const deviceHwid = useSubscriptionStore((x) => x.deviceHwid);
-  const setSubUrl = useSubscriptionStore((x) => x.setUrl);
-  const setSubHwid = useSubscriptionStore((x) => x.setHwid);
   const fetchSubscription = useSubscriptionStore((x) => x.fetchSubscription);
-  const subLoading = useSubscriptionStore((x) => x.loading);
-  const subError = useSubscriptionStore((x) => x.error);
+  // beta.21: после удаления категорий «Подписка/Подключение/Интерфейс»
+  // здесь остались только те subscription-store хуки, которые ещё
+  // используются в оставшихся разделах (engine smart-reconnect).
   // 8.B: для smart-reconnect при смене движка нужны connect/disconnect
   // и текущий статус — иначе пользователь меняет engine, подписка
   // refetch'ится, но активная сессия остаётся на старом движке.
   const vpnStatus = useVpnStore((s) => s.status);
   const vpnConnect = useVpnStore((s) => s.connect);
   const vpnDisconnect = useVpnStore((s) => s.disconnect);
-  const [hwidCopied, setHwidCopied] = useState(false);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   // Активная категория. null = главный экран со списком категорий.
   const [category, setCategory] = useState<SettingsCategory | null>(null);
@@ -162,16 +130,8 @@ export function SettingsPage({ onClose }: { onClose: () => void }) {
     !s.engineTouched && headerEngine ? headerEngine : s.engine;
   const mihomoActive = effectiveEngine === "mihomo";
 
-  const copyHwid = async () => {
-    if (!deviceHwid) return;
-    try {
-      await navigator.clipboard.writeText(deviceHwid);
-      setHwidCopied(true);
-      setTimeout(() => setHwidCopied(false), 1500);
-    } catch {
-      // игнорируем
-    }
-  };
+  // beta.21: copyHwid + advancedOpen больше не нужны — категория «Подписка»
+  // удалена, поле HWID жило только там.
 
   // Header: разный заголовок и поведение «назад» в зависимости от уровня.
   const onBack = () => {
@@ -209,260 +169,9 @@ export function SettingsPage({ onClose }: { onClose: () => void }) {
             <CategoryList onSelect={setCategory} />
           )}
 
-          {/* ── Подписка ─────────────────────────────────────────────────── */}
-          {category === "subscription" && (
-            <>
-              <section className="settings-section">
-                <div className="settings-section-title">{t("settings.subscription.title")}</div>
-                {subMeta?.title && (
-                  <div className="settings-row-hint" style={{ marginBottom: 8 }}>
-                    {subMeta.title} <span className="hint-badge">{t("settings.fromSubscription")}</span>
-                  </div>
-                )}
-                <div className="row-input">
-                  <input
-                    type="url"
-                    value={subUrl}
-                    onChange={(e) => setSubUrl(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && fetchSubscription()}
-                    placeholder="https://sub.example.com/..."
-                    className="input"
-                  />
-                  <button
-                    type="button"
-                    disabled={subLoading || !subUrl.trim()}
-                    onClick={() => fetchSubscription()}
-                    className="btn-ghost"
-                  >
-                    {subLoading ? "…" : t("common.refresh")}
-                  </button>
-                </div>
-                {subError && <pre className="hero-error">{subError}</pre>}
-                {subMeta?.webPageUrl && (
-                  <button
-                    type="button"
-                    onClick={openDashboard}
-                    className="btn-ghost"
-                    style={{ alignSelf: "flex-start", marginTop: 4 }}
-                  >
-                    {t("settings.subscription.dashboard")}
-                  </button>
-                )}
-              </section>
+          {/* Категория «Подписка» удалена в beta.21 — JSX вычищен полностью. */}
 
-              <section className="settings-section">
-                <div className="settings-section-title">{t("settings.autoRefresh.title")}</div>
-
-                <div className="settings-row">
-                  <div>
-                    <div className="settings-row-label">{t("settings.autoRefresh.label")}</div>
-                    <div className="settings-row-hint">
-                      {t("settings.autoRefresh.hint")}
-                    </div>
-                  </div>
-                  <Toggle
-                    on={s.autoRefresh}
-                    onChange={(v) => s.set("autoRefresh", v)}
-                  />
-                </div>
-
-                {s.autoRefresh && (
-                  <div className="settings-row">
-                    <div>
-                      <div className="settings-row-label">
-                        {t("settings.autoRefresh.intervalHours")}
-                        {!s.autoRefreshHoursTouched &&
-                          subMeta?.updateIntervalHours != null && (
-                            <span className="hint-badge" style={{ marginLeft: 8 }}>
-                              {t("settings.fromSubscription")}
-                            </span>
-                          )}
-                      </div>
-                    </div>
-                    <input
-                      type="number"
-                      min={1}
-                      max={48}
-                      value={
-                        !s.autoRefreshHoursTouched && subMeta?.updateIntervalHours
-                          ? subMeta.updateIntervalHours
-                          : s.autoRefreshHours
-                      }
-                      onChange={(e) =>
-                        s.set(
-                          "autoRefreshHours",
-                          Math.max(1, Math.min(48, Number(e.target.value) || 1))
-                        )
-                      }
-                      className="input input-num"
-                    />
-                  </div>
-                )}
-              </section>
-
-              <section className="settings-section">
-                <div className="settings-section-title">{t("settings.dataSending.title")}</div>
-
-                <div className="settings-row">
-                  <div>
-                    <div className="settings-row-label">{t("settings.dataSending.sendHwid.label")}</div>
-                    <div className="settings-row-hint">
-                      {t("settings.dataSending.sendHwid.hint")}
-                    </div>
-                  </div>
-                  <Toggle
-                    on={s.sendHwid}
-                    onChange={(v) => s.set("sendHwid", v)}
-                  />
-                </div>
-
-                <div className="settings-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 6 }}>
-                  <div className="settings-row-label">
-                    {t("settings.dataSending.userAgent.label")}
-                    {!s.userAgentTouched && (
-                      <span className="hint-badge" style={{ marginLeft: 8 }}>
-                        {t("settings.dataSending.userAgent.autoBadge")}
-                      </span>
-                    )}
-                  </div>
-                  <input
-                    type="text"
-                    value={s.userAgent}
-                    onChange={(e) => s.set("userAgent", e.target.value)}
-                    placeholder={mihomoActive ? DEFAULT_USER_AGENT_MIHOMO : DEFAULT_USER_AGENT_SINGBOX}
-                    className="input"
-                  />
-                  <div className="settings-row-hint">
-                    {t("settings.dataSending.userAgent.hint")}
-                  </div>
-                </div>
-              </section>
-
-              <section className="settings-section">
-                <div className="settings-section-title">{t("settings.hwid.title")}</div>
-                <div className="hwid-row">
-                  <span className={"hwid-value" + (deviceHwid ? "" : " hwid-empty")}>
-                    {deviceHwid || "—"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={copyHwid}
-                    disabled={!deviceHwid}
-                    className="btn-ghost"
-                  >
-                    {hwidCopied ? t("common.ok") : t("common.copy")}
-                  </button>
-                </div>
-                <p className="hint">
-                  {t("settings.hwid.hint")}
-                </p>
-
-                <button
-                  type="button"
-                  onClick={() => setAdvancedOpen((v) => !v)}
-                  className="advanced-toggle"
-                >
-                  {advancedOpen ? `▾ ${t("settings.hwid.override")}` : `▸ ${t("settings.hwid.override")}`}
-                </button>
-                {advancedOpen && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
-                    {subHwid.trim() && (
-                      <div className="warn-box">
-                        <span className="warn-box-text">
-                          {t("settings.hwid.overrideActive", { value: subHwid.slice(0, 12) })}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setSubHwid("")}
-                          className="btn-ghost"
-                        >
-                          {t("settings.hwid.resetOverride")}
-                        </button>
-                      </div>
-                    )}
-                    <input
-                      type="text"
-                      value={subHwid}
-                      onChange={(e) => setSubHwid(e.target.value)}
-                      placeholder={
-                        deviceHwid || t("settings.hwid.placeholder")
-                      }
-                      className="input"
-                    />
-                  </div>
-                )}
-              </section>
-            </>
-          )}
-
-          {/* ── Подключение ─────────────────────────────────────────────── */}
-          {category === "connection" && (
-            <>
-              <section className="settings-section">
-                <div className="settings-section-title">{t("settings.connection.onStart.title")}</div>
-
-                <div className="settings-row">
-                  <div>
-                    <div className="settings-row-label">{t("settings.connection.refreshOnOpen.label")}</div>
-                    <div className="settings-row-hint">
-                      {t("settings.connection.refreshOnOpen.hint")}
-                    </div>
-                  </div>
-                  <Toggle
-                    on={s.refreshOnOpen}
-                    onChange={(v) => s.set("refreshOnOpen", v)}
-                  />
-                </div>
-
-                <div className="settings-row">
-                  <div>
-                    <div className="settings-row-label">{t("settings.connection.pingOnOpen.label")}</div>
-                    <div className="settings-row-hint">
-                      {t("settings.connection.pingOnOpen.hint")}
-                    </div>
-                  </div>
-                  <Toggle
-                    on={s.pingOnOpen}
-                    onChange={(v) => s.set("pingOnOpen", v)}
-                  />
-                </div>
-
-                <div className="settings-row">
-                  <div>
-                    <div className="settings-row-label">{t("settings.connection.connectOnOpen.label")}</div>
-                    <div className="settings-row-hint">
-                      {t("settings.connection.connectOnOpen.hint")}
-                    </div>
-                  </div>
-                  <Toggle
-                    on={s.connectOnOpen}
-                    onChange={(v) => s.set("connectOnOpen", v)}
-                  />
-                </div>
-              </section>
-
-              <section className="settings-section">
-                <div className="settings-section-title">{t("settings.connection.sort.title")}</div>
-                {(
-                  [
-                    ["none", "settings.connection.sort.none"],
-                    ["ping", "settings.connection.sort.ping"],
-                    ["name", "settings.connection.sort.name"],
-                  ] as [SortMode, string][]
-                ).map(([value, labelKey]) => (
-                  <label key={value} className="radio-row">
-                    <input
-                      type="radio"
-                      name="sort"
-                      checked={s.sort === value}
-                      onChange={() => s.set("sort", value)}
-                    />
-                    <span>{t(labelKey)}</span>
-                  </label>
-                ))}
-              </section>
-            </>
-          )}
+          {/* Категория «Подключение» удалена в beta.21 — JSX вычищен. */}
 
           {/* ── Движок ──────────────────────────────────────────────────── */}
           {category === "engine" && (
@@ -1020,176 +729,7 @@ export function SettingsPage({ onClose }: { onClose: () => void }) {
             </>
           )}
 
-          {/* ── Интерфейс ───────────────────────────────────────────────── */}
-          {category === "appearance" && (
-            <>
-              <LanguageSection />
-
-              <section className="settings-section">
-                <div className="settings-section-title">{t("settings.appearance.preset.title")}</div>
-                <div className="settings-row">
-                  <div>
-                    <div className="settings-row-label">
-                      {t("settings.appearance.preset.label")}
-                      {eff.fromSubscription.preset && (
-                        <span className="hint-badge" style={{ marginLeft: 8 }}>
-                          {t("settings.fromSubscription")}
-                        </span>
-                      )}
-                    </div>
-                    <div className="settings-row-hint">
-                      {t("settings.appearance.preset.hint")}
-                    </div>
-                  </div>
-                  <select
-                    className="select-field"
-                    value={eff.preset}
-                    onChange={(e) => s.set("preset", e.target.value as Preset)}
-                  >
-                    <option value="none">{t("settings.appearance.preset.options.none")}</option>
-                    <option value="fluent">fluent</option>
-                    <option value="cupertino">cupertino</option>
-                    <option value="vice">vice</option>
-                    <option value="arcade">arcade</option>
-                    <option value="glacier">glacier</option>
-                  </select>
-                </div>
-              </section>
-
-              {(() => {
-                const presetActive = eff.preset !== "none";
-                const effectiveBg = presetActive
-                  ? PRESET_BACKGROUND[eff.preset]
-                  : eff.background;
-                const effectiveStyle = presetActive
-                  ? PRESET_BUTTON_STYLE[eff.preset]
-                  : eff.buttonStyle;
-                const presetHint = t("settings.appearance.themeStyle.presetHint");
-                return (
-                  <section className="settings-section">
-                    <div className="settings-section-title">{t("settings.appearance.themeStyle.title")}</div>
-                    <div className="settings-row">
-                      <div>
-                        <div className="settings-row-label">
-                          {t("settings.appearance.theme.label")}
-                          {!presetActive && eff.fromSubscription.theme && (
-                            <span className="hint-badge" style={{ marginLeft: 8 }}>
-                              {t("settings.fromSubscription")}
-                            </span>
-                          )}
-                        </div>
-                        <div className="settings-row-hint">
-                          {presetActive ? presetHint : t("settings.appearance.theme.hint")}
-                        </div>
-                      </div>
-                      <select
-                        className="select-field"
-                        value={s.theme}
-                        disabled={presetActive}
-                        onChange={(e) => s.set("theme", e.target.value as Theme)}
-                      >
-                        <option value="system">{t("settings.appearance.theme.options.system")}</option>
-                        <option value="dark">{t("settings.appearance.theme.options.dark")}</option>
-                        <option value="light">{t("settings.appearance.theme.options.light")}</option>
-                        <option value="midnight">midnight</option>
-                        <option value="sunset">sunset</option>
-                        <option value="sand">sand</option>
-                      </select>
-                    </div>
-                    <div className="settings-row">
-                      <div>
-                        <div className="settings-row-label">
-                          {t("settings.appearance.background.label")}
-                          {!presetActive && eff.fromSubscription.background && (
-                            <span className="hint-badge" style={{ marginLeft: 8 }}>
-                              {t("settings.fromSubscription")}
-                            </span>
-                          )}
-                        </div>
-                        <div className="settings-row-hint">
-                          {presetActive ? presetHint : t("settings.appearance.background.hint")}
-                        </div>
-                      </div>
-                      <select
-                        className="select-field"
-                        value={effectiveBg}
-                        disabled={presetActive}
-                        onChange={(e) => s.set("background", e.target.value as Background)}
-                      >
-                        <option value="crystal">{t("settings.appearance.background.options.crystal")}</option>
-                        <option value="tunnel">{t("settings.appearance.background.options.tunnel")}</option>
-                        <option value="globe">{t("settings.appearance.background.options.globe")}</option>
-                        <option value="particles">{t("settings.appearance.background.options.particles")}</option>
-                      </select>
-                    </div>
-                    <div className="settings-row">
-                      <div>
-                        <div className="settings-row-label">
-                          {t("settings.appearance.buttonStyle.label")}
-                          {!presetActive && eff.fromSubscription.buttonStyle && (
-                            <span className="hint-badge" style={{ marginLeft: 8 }}>
-                              {t("settings.fromSubscription")}
-                            </span>
-                          )}
-                        </div>
-                        <div className="settings-row-hint">
-                          {presetActive ? presetHint : t("settings.appearance.buttonStyle.hint")}
-                        </div>
-                      </div>
-                      <select
-                        className="select-field"
-                        value={effectiveStyle}
-                        disabled={presetActive}
-                        onChange={(e) => s.set("buttonStyle", e.target.value as ButtonStyle)}
-                      >
-                        <option value="glass">{t("settings.appearance.buttonStyle.options.glass")}</option>
-                        <option value="flat">{t("settings.appearance.buttonStyle.options.flat")}</option>
-                        <option value="neon">{t("settings.appearance.buttonStyle.options.neon")}</option>
-                        <option value="metallic">{t("settings.appearance.buttonStyle.options.metallic")}</option>
-                      </select>
-                    </div>
-                  </section>
-                );
-              })()}
-
-              <section className="settings-section">
-                <div className="settings-section-title">{t("settings.appearance.floating.title")}</div>
-                <div className="settings-row">
-                  <div>
-                    <div className="settings-row-label">
-                      {t("settings.appearance.floating.label")}
-                    </div>
-                    <div className="settings-row-hint">
-                      {t("settings.appearance.floating.hint")}
-                    </div>
-                  </div>
-                  <Toggle
-                    on={s.floatingWindow}
-                    onChange={(v) => {
-                      s.set("floatingWindow", v);
-                      void invoke(
-                        v ? "show_floating_window" : "hide_floating_window"
-                      );
-                    }}
-                  />
-                </div>
-                <div className="settings-row">
-                  <div>
-                    <div className="settings-row-label">
-                      {t("settings.appearance.memoryMonitor.label")}
-                    </div>
-                    <div className="settings-row-hint">
-                      {t("settings.appearance.memoryMonitor.hint")}
-                    </div>
-                  </div>
-                  <Toggle
-                    on={s.showMemoryMonitor}
-                    onChange={(v) => s.set("showMemoryMonitor", v)}
-                  />
-                </div>
-              </section>
-            </>
-          )}
+          {/* Категория «Интерфейс» удалена в beta.21 — JSX вычищен. */}
 
           {/* ── Система и о программе ───────────────────────────────────── */}
           {category === "system" && (
@@ -1699,51 +1239,8 @@ function FeedbackButton() {
   );
 }
 
-// ── 14.J Language section ─────────────────────────────────────────────────
-
-function LanguageSection() {
-  const language = useSettingsStore((s) => s.language);
-  const setSetting = useSettingsStore((s) => s.set);
-  const { i18n, t } = useTranslation();
-
-  const onChange = (value: "auto" | "ru" | "en") => {
-    setSetting("language", value);
-    // i18n.changeLanguage:
-    // - "auto" → детектим из navigator.language
-    // - "ru" / "en" → явный
-    if (value === "auto") {
-      const nav = navigator.language?.toLowerCase() ?? "";
-      void i18n.changeLanguage(nav.startsWith("ru") ? "ru" : "en");
-    } else {
-      void i18n.changeLanguage(value);
-    }
-  };
-
-  return (
-    <section className="settings-section">
-      <div className="settings-section-title">{t("settings.language.title")}</div>
-      <div className="settings-row">
-        <div>
-          <div className="settings-row-label">{t("settings.language.label")}</div>
-          <div className="settings-row-hint">
-            {t("settings.language.hint")}
-          </div>
-        </div>
-        <select
-          className="select-field"
-          value={language}
-          onChange={(e) =>
-            onChange(e.target.value as "auto" | "ru" | "en")
-          }
-        >
-          <option value="auto">{t("settings.language.auto")}</option>
-          <option value="ru">Русский</option>
-          <option value="en">English</option>
-        </select>
-      </div>
-    </section>
-  );
-}
+// LanguageSection удалён в beta.21 вместе с категорией «Интерфейс».
+// Переключение языка теперь живёт в footer-pill через флажки 🇷🇺/🇬🇧.
 
 // ── 14.A Updates section ──────────────────────────────────────────────────
 

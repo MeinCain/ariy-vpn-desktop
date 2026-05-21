@@ -850,7 +850,8 @@ input, textarea { font: inherit; cursor: text; }
 .country-row-flag-placeholder { background: rgba(255, 255, 255, 0.08); }
 .country-row-name {
   flex: 1;
-  font-weight: 600;
+  font-weight: 500;
+  text-align: left;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
