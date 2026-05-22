@@ -4249,6 +4249,13 @@ input, textarea { font: inherit; cursor: text; }
   padding: 22px 26px 28px;
   text-align: center;
   align-items: stretch;
+  /* beta.28: Welcome — full-screen экран. Растягиваемся на весь .frame
+     (Header/PowerStack/Footer не рендерятся когда нет подписки).
+     min-height нужен для дёргающихся пустых форм (login-formы внутри
+     раскрываются/сворачиваются — без min-height был бы прыжок layout'а). */
+  flex: 1;
+  min-height: calc(100dvh - 36px);
+  justify-content: center;
 }
 .ariy-hero { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 8px; }
 .ariy-hero-logo {

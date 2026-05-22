@@ -451,38 +451,32 @@ function App() {
       <div className="app">
         <div className="frame">
           <AnnounceBanner />
-          <Header onOpenSettings={() => setSettingsOpen(true)} />
 
-          {/* Sub-strip снова под Header'ом — как в Chrome-расширении
-              Ariy и в mockup'е, который юзер прислал. user_id / тариф /
-              трафик / дни + 🎁 + ×. CompactSubInfo под кнопкой удалён. */}
-          {hasSubscription && <SubscriptionStrip />}
-
-          <div className="main-grid">
-            <div className="grid-power">
-              <PowerStack canConnect={canConnect} />
-              {/* Девиз под таймером, как на референсном скриншоте. */}
-              {hasSubscription && (
-                <div className="ariy-tagline">
-                  Be fast. <span className="ariy-tagline-accent">Be stealthy.</span> Be free.
+          {/* beta.28: Welcome — отдельный full-screen экран без шапки,
+              power-кнопки и футера. Когда подписки нет, юзер видит
+              только Welcome (логин формы) на всём окне. Хедер с
+              настройками тут не нужен — он не залогинен, ничего настраивать.
+              На главный экран Header/SubStrip/main-grid/Footer возвращаются
+              как только подписка появилась. */}
+          {!hasSubscription ? (
+            <Welcome />
+          ) : (
+            <>
+              <Header onOpenSettings={() => setSettingsOpen(true)} />
+              <SubscriptionStrip />
+              <div className="main-grid">
+                <div className="grid-power">
+                  <PowerStack canConnect={canConnect} />
+                  <div className="ariy-tagline">
+                    Be fast. <span className="ariy-tagline-accent">Be stealthy.</span> Be free.
+                  </div>
                 </div>
-              )}
-            </div>
-            <div className="grid-servers">
-              {hasSubscription ? (
-                <>
+                <div className="grid-servers">
                   <CurrentServerWidget onPick={() => setDrawerOpen((v) => !v)} />
-                  {/* CountryDrawer теперь inline expand сразу под текущим
-                      сервером — никаких overlay'ев, fixed-позиций, blur'а
-                      или порталов. После трёх неудачных попыток с
-                      bottom-sheet-overlay в Tauri WebView2 (юзер видел
-                      «пустую страницу») сдался на простой block-flow. */}
                   <CountryDrawer
                     open={drawerOpen}
                     onClose={() => setDrawerOpen(false)}
                   />
-                  {/* ModeSegment под server-pill — переключатель «системный
-                      прокси / TUN» как в референсе. */}
                   {!tunOnlyStrict && (
                     <ModeSegment
                       mode={mode}
@@ -490,17 +484,14 @@ function App() {
                       disabled={isRunning || isBusy}
                     />
                   )}
-                </>
-              ) : (
-                <Welcome />
-              )}
-            </div>
-            {errorMessage && (
-              <pre className="hero-error grid-error">{errorMessage}</pre>
-            )}
-          </div>
-
-          <Footer />
+                </div>
+                {errorMessage && (
+                  <pre className="hero-error grid-error">{errorMessage}</pre>
+                )}
+              </div>
+              <Footer />
+            </>
+          )}
         </div>
       </div>
 
