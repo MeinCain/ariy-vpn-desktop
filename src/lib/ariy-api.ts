@@ -224,3 +224,47 @@ export async function apiMe(sessionToken: string): Promise<AriyMe | null> {
     };
   } catch { return null; }
 }
+
+
+// ── Trial proxy для Telegram-login без подписки ─────────────────────
+// Endpoint выдаёт 10-минутные HMAC creds на дефолтную ноду. Юзер
+// активирует system-proxy с этими creds, открывает Telegram (даже
+// если он заблокирован), проходит OAuth → получает session_token →
+// trial-mode выключается, переходим на постоянную подписку.
+
+export type TrialProxyResponse = {
+  host: string;
+  port: number;
+  user: string;
+  pass: string;
+  expires_in: number;
+};
+
+export async function apiFetchTrialProxy(): Promise<TrialProxyResponse | null> {
+  let r: Response;
+  try {
+    r = await fetch(`${API_BASE}/v1/auth/trial-proxy`, {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+      connectTimeout: LOGIN_TIMEOUT_MS,
+    });
+  } catch (e) {
+    console.warn('[ariy-api] trial-proxy failed:', e);
+    return null;
+  }
+  if (!r.ok) {
+    console.warn('[ariy-api] trial-proxy non-ok status:', r.status);
+    return null;
+  }
+  try {
+    const body: any = await r.json();
+    if (!body || !body.host) return null;
+    return {
+      host: body.host,
+      port: body.port,
+      user: body.user,
+      pass: body.pass,
+      expires_in: body.expires_in,
+    };
+  } catch { return null; }
+}
