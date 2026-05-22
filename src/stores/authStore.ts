@@ -9,12 +9,18 @@ import {
 } from "../lib/ariy-api";
 
 const LS_KEY = "ariy.auth";
+const KEYRING_KEY = "ariy.auth.session_token";
 
 type Persisted = {
   sessionToken: string | null;
 };
 
 function loadPersisted(): Persisted {
+  // beta.25: дублирующее хранилище в Windows Credential Manager через
+  // tauri-cmd secure_storage. localStorage WebView2 живёт в
+  // %LOCALAPPDATA%\com.ariyvpn.desktop\EBWebView\, и в редких случаях
+  // (cleaner-утилиты, переустановка NSIS поверх с другим путём) папка
+  // могла исчезнуть. Keyring более надёжен для главных credentials.
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return { sessionToken: null };
@@ -24,10 +30,38 @@ function loadPersisted(): Persisted {
 }
 
 function persist(s: Persisted) {
+  // localStorage — primary (быстро, sync). Keyring — secondary (async,
+  // защита от reset'а localStorage).
   try {
     if (!s.sessionToken) localStorage.removeItem(LS_KEY);
     else localStorage.setItem(LS_KEY, JSON.stringify(s));
   } catch { /* quota */ }
+  // Best-effort backup в keyring (fire-and-forget).
+  import("@tauri-apps/api/core").then(({ invoke }) => {
+    if (s.sessionToken) {
+      void invoke("secure_storage_set", { key: KEYRING_KEY, value: s.sessionToken }).catch(() => {});
+    } else {
+      void invoke("secure_storage_delete", { key: KEYRING_KEY }).catch(() => {});
+    }
+  }).catch(() => {});
+}
+
+/** Recovery из keyring если localStorage пуст (после reset'а WebView2-папки).
+ *  Вызывается из App.tsx на mount'е сразу после loadPersisted. */
+export async function recoverSessionFromKeyring(): Promise<void> {
+  // Если уже есть в state — не трогаем.
+  if (useAuthStore.getState().sessionToken) return;
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const token = await invoke<string | null>("secure_storage_get", { key: KEYRING_KEY });
+    if (token && typeof token === "string" && token.length > 0) {
+      useAuthStore.setState({ sessionToken: token });
+      persist({ sessionToken: token }); // обратно в localStorage чтобы synced
+      console.log("[auth] session_token recovered from keyring");
+    }
+  } catch (e) {
+    console.warn("[auth] keyring recovery failed:", e);
+  }
 }
 
 export type LoginResult = { ok: true } | { ok: false; code: string; message: string };

@@ -37,7 +37,7 @@ import { runLeakTest } from "./lib/leakTest";
 import { ModeSegment } from "./components/ModeSegment";
 import { Footer } from "./components/Footer";
 import { SettingsPage } from "./components/SettingsPage";
-import { useAuthStore } from "./stores/authStore";
+import { useAuthStore, recoverSessionFromKeyring } from "./stores/authStore";
 import { apiFetchAuthMe } from "./lib/ariy-api";
 
 /**
@@ -130,27 +130,46 @@ function App() {
     // На mount подтягиваем plan/email/telegram_id из /v1/auth/me в
     // authStore. Без этого SubscriptionStrip не показывал «Тариф: VIP»
     // — план хранится только в cabinet, не в подписке Remnawave.
-    void useAuthStore.getState().loadMe().catch(() => {});
+    // beta.25: восстанавливаем sessionToken из Windows Credential Manager
+    // если localStorage пуст (после очистки WebView2-папки переустановкой).
+    // После recovery loadMe и sub-recovery дёрнут api с восстановленным token.
+    void recoverSessionFromKeyring().then(() => {
+      void useAuthStore.getState().loadMe().catch(() => {});
+    });
     void loadSecureCreds().then(async () => {
-      // Auto-recovery: если у юзера есть валидный session_token, но
-      // sub_url в Credential Manager пустой (например, после обновления
-      // приложения, когда keyring запись не пережила install), —
-      // достаём sub_url через `/v1/auth/me` и подсовываем в subscription
-      // store. Без этого юзер видел Welcome-экран после auto-update,
-      // хотя его session ещё валидна.
+      // Auto-recovery (усилена в beta.25): если у юзера есть валидный
+      // session_token, но sub_url в Credential Manager пустой
+      // (после обновления приложения keyring-запись могла не пережить
+      // install), — ВСЕГДА дёргаем /v1/auth/me чтобы свежий sub_url
+      // подтянулся. Не один раз, а с retry на сетевых ошибках —
+      // у юзера может быть только-только восстановилась сеть.
       const { sessionToken } = useAuthStore.getState();
       const sub = useSubscriptionStore.getState();
-      if (sessionToken && !sub.url && sub.subscriptions.length === 0) {
-        try {
-          const me = await apiFetchAuthMe(sessionToken);
-          if (me && me.sub_url) {
-            useSubscriptionStore.getState().setUrl(me.sub_url);
-            await useSubscriptionStore.getState().fetchSubscription();
-            return; // fetchSubscription уже refresh'нул всё — двойной не нужен
+      if (sessionToken) {
+        const tryRecover = async (attempt: number): Promise<boolean> => {
+          try {
+            const me = await apiFetchAuthMe(sessionToken);
+            if (me && me.sub_url) {
+              // Подсовываем sub_url только если в store его нет (не
+              // перетираем то что уже корректно загрузилось из keyring).
+              const cur = useSubscriptionStore.getState();
+              if (!cur.url) cur.setUrl(me.sub_url);
+              await useSubscriptionStore.getState().fetchSubscription();
+              return true;
+            }
+            return false;
+          } catch (e) {
+            console.warn(`[mount] apiFetchAuthMe recovery attempt ${attempt} failed:`, e);
+            return false;
           }
-        } catch (e) {
-          console.warn("[mount] apiFetchAuthMe recovery failed", e);
+        };
+        // Первая попытка сразу, при неудаче ещё две через 3 и 10 сек.
+        let ok = await tryRecover(1);
+        if (!ok && sub.servers.length === 0) {
+          setTimeout(() => { void tryRecover(2); }, 3000);
+          setTimeout(() => { void tryRecover(3); }, 10000);
         }
+        if (ok) return;
       }
       if (refreshOnOpen) {
         void fetchSubscription();
