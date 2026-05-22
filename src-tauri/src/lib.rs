@@ -21,7 +21,8 @@ use ipc::commands::{
     read_xray_log, recover_network, restore_proxy_backup, routing_add_static, routing_add_url,
     routing_list, routing_refresh, routing_remove, routing_set_active, secure_storage_delete,
     secure_storage_get, secure_storage_set, show_floating_window, shutdown_helper,
-    force_quit, tray_set_status, KillSwitchState,
+    force_quit, tray_set_status, connect_trial_proxy, disconnect_trial_proxy,
+    KillSwitchState,
 };
 use vpn::{MihomoState, SingBoxState};
 
@@ -215,6 +216,8 @@ pub fn run() {
             connection_ping,
             shutdown_helper,
             force_quit,
+            connect_trial_proxy,
+            disconnect_trial_proxy,
             export_diagnostics,
             export_settings_to_documents,
             fetch_settings_backup,

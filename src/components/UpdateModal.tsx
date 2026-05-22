@@ -14,6 +14,25 @@ import { showToast } from "../stores/toastStore";
  * `downloading` state, показываем прогресс-бар, после успешной
  * установки приложение перезапускается автоматически.
  */
+
+/** Чистим release notes от технических ссылок которые юзеру не нужны:
+ *  - markdown-ссылки `[text](url)` → оставляем только `text`
+ *  - голые URL'ы https://github.com/... / api.example.com/... → удаляем
+ *  - блоки с упоминаниями [Releases](...) / [commit](...) / [Release page]
+ *  - fallback-строки от backend'а вида «See https://github.com/.../...»
+ *  Юзер прямо просил: «не должен пользователь видеть ссылки на гитхаб». */
+function sanitizeNotes(raw: string): string {
+  let t = raw.trim();
+  // 1. Markdown-ссылки → текст без URL
+  t = t.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+  // 2. Fallback "See https://github.com/..."
+  t = t.replace(/^See https?:\/\/github\.com\/\S*$/gim, "").trim();
+  // 3. Голые github / api.example ссылки — убираем
+  t = t.replace(/https?:\/\/(github\.com|api\.ariyvpn\.com|raw\.githubusercontent\.com)\S*/gi, "");
+  // 4. Двойные пустые строки после чистки → одиночные
+  t = t.replace(/\n{3,}/g, "\n\n");
+  return t.trim();
+}
 export function UpdateModal() {
   const { t } = useTranslation();
   const state = useUpdateStore((s) => s.state);
@@ -86,7 +105,7 @@ export function UpdateModal() {
               borderRadius: 6,
             }}
           >
-            {update.notes.trim()}
+            {sanitizeNotes(update.notes)}
           </pre>
         ) : null}
         {isDownloading ? (

@@ -1295,6 +1295,68 @@ pub fn force_quit() {
     std::process::exit(0);
 }
 
+/// beta.27: Trial-proxy для Telegram-login без подписки.
+///
+/// Запускает sing-box sidecar с HTTPS-proxy outbound на trial-ноду
+/// (Финляндия) с basic-auth (creds выдаёт `/v1/auth/trial-proxy` на
+/// 10 минут) и mixed inbound на 127.0.0.1:<port>. После старта
+/// устанавливает system-proxy на этот local port — TG-app или
+/// браузер автоматически идут через trial-туннель, обходя блок.
+///
+/// Когда юзер успешно логинится → `disconnect_trial_proxy` гасит
+/// sing-box + чистит system-proxy.
+#[tauri::command]
+pub async fn connect_trial_proxy(
+    app: tauri::AppHandle,
+    sing: State<'_, vpn::SingBoxState>,
+    host: String,
+    port: u16,
+    user: String,
+    pass: String,
+) -> Result<u16, String> {
+    let mixed_port = find_free_port(18000);
+    let config = serde_json::json!({
+        "log": { "level": "warn" },
+        "inbounds": [{
+            "type": "mixed",
+            "tag": "trial-in",
+            "listen": "127.0.0.1",
+            "listen_port": mixed_port,
+        }],
+        "outbounds": [{
+            "type": "http",
+            "tag": "trial-out",
+            "server": host,
+            "server_port": port,
+            "username": user,
+            "password": pass,
+            "tls": {
+                "enabled": true,
+                "server_name": host,
+            },
+        }],
+    });
+    sing.start_with_config(&app, &config.to_string(), mixed_port)?;
+    // Sing-box успевает забиндить mixed-port за ~500мс; даём 700мс
+    // запас на медленных машинах перед set_system_proxy.
+    tokio::time::sleep(std::time::Duration::from_millis(700)).await;
+    // Mixed-inbound у sing-box одновременно SOCKS5 + HTTP/HTTPS на одном
+    // порту — ставим как HTTP/HTTPS-прокси (TG-app использует HTTPS).
+    platform::proxy::set_system_proxy(mixed_port, mixed_port).map_err(|e| e.to_string())?;
+    Ok(mixed_port)
+}
+
+/// Парная команда: гасим trial-sing-box + чистим system-proxy.
+/// Идемпотентна — если ничего не запущено, ничего не делает.
+#[tauri::command]
+pub async fn disconnect_trial_proxy(
+    sing: State<'_, vpn::SingBoxState>,
+) -> Result<(), String> {
+    let _ = sing.stop();
+    let _ = platform::proxy::clear_system_proxy();
+    Ok(())
+}
+
 // ─── Connection ping (Settings → пинг) ──────────────────────────────────────
 
 /// Замерить ping заданным методом (TCP / HTTP-GET / HTTP-HEAD).
