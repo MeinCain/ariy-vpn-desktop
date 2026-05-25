@@ -158,30 +158,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (get().busy) return { ok: false, code: "busy", message: "уже идёт логин" };
     set({ busy: true });
     try {
-      // beta.27: ПЕРЕД запросом TG login пробуем поднять trial-proxy.
-      // Если у юзера Telegram заблокирован провайдером — login URL
-      // (`t.me/...`) не откроется. Trial-proxy через нашу дефолтную ноду
-      // (Финляндия) дает временный VPN-туннель на 10 минут. После
-      // успешного login → trial автоматически отключается.
-      try {
-        const { invoke } = await import("@tauri-apps/api/core");
-        const { apiFetchTrialProxy } = await import("../lib/ariy-api");
-        const trial = await apiFetchTrialProxy();
-        if (trial) {
-          await invoke("connect_trial_proxy", {
-            host: trial.host,
-            port: trial.port,
-            user: trial.user,
-            pass: trial.pass,
-          });
-          console.log("[authStore] trial-proxy активирован для TG-login");
-        }
-      } catch (e) {
-        // Trial-proxy не критичен — если не получилось, идём дальше.
-        // Юзер с работающим Telegram пройдёт login без проблем.
-        console.warn("[authStore] trial-proxy preflight failed:", e);
-      }
-
+      // Сначала получаем login URL напрямую (без прокси), чтобы критический
+      // запрос к auth-api не шёл через fi-01. После получения URL поднимаем
+      // trial-proxy — к моменту когда Welcome.tsx откроет URL в браузере,
+      // прокси уже будет активен.
       const resp = await telegramStart();
       const tg: TgLoginState = {
         state: resp.state,
@@ -219,12 +199,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         } catch { /* транзиент сети — попробуем на следующем тике */ }
       }, 3000);
 
+      // Trial-proxy поднимаем ПОСЛЕ получения login URL и запуска поллинга.
+      // Webview2 использует system-proxy для fetch() — если активировать
+      // прокси до telegramStart(), тот запрос пойдёт через fi-01 → лишний
+      // хоп и точка отказа. Здесь прокси поднимается перед тем как
+      // Welcome.tsx откроет URL в браузере — система уже будет проксирована.
+      try {
+        const { invoke } = await import("@tauri-apps/api/core");
+        const { apiFetchTrialProxy } = await import("../lib/ariy-api");
+        const trial = await apiFetchTrialProxy();
+        if (trial) {
+          await invoke("connect_trial_proxy", {
+            host: trial.host,
+            port: trial.port,
+            user: trial.user,
+            pass: trial.pass,
+          });
+          console.log("[authStore] trial-proxy активирован для TG-login");
+        }
+      } catch (e) {
+        // Trial-proxy не критичен — юзер с рабочим Telegram пройдёт без него.
+        console.warn("[authStore] trial-proxy preflight failed:", e);
+      }
+
       return { ok: true };
     } catch (e) {
       set({ busy: false });
       console.error("[authStore] startTelegramLogin exception", e);
-      // На ошибке тоже чистим trial — мы могли его уже поднять до
-      // упавшего telegramStart.
       void teardownTrialProxy();
       if (e instanceof AriyApiError) return { ok: false, code: e.code, message: e.message };
       return { ok: false, code: "network", message: (e as Error).message ?? "сеть недоступна" };
