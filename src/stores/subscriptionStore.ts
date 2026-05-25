@@ -958,8 +958,11 @@ export const useSubscriptionStore = create<SubscriptionStore>((set, get) => ({
           useVpnStore.setState({ selectedIndex: 0 });
         }
       }
-      // Авто-пинг сразу после получения списка
+      // Авто-пинг сразу после получения списка. Первый проход — DNS холодный,
+      // поэтому RTT выше нормы (150-300мс, жёлтый). Второй проход через 3с
+      // использует тёплый DNS-кеш и даёт реальную латентность (<80мс, зелёный).
       void get().pingAll();
+      window.setTimeout(() => void get().pingAll(), 3000);
 
       // 11.E: если в подписке нашлись routing-директивы (`://routing/...`,
       // `://autorouting/...` спец-строки) — применяем через bash-команды.
