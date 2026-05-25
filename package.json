@@ -1,7 +1,7 @@
 {
   "name": "ariy-vpn-desktop",
   "private": true,
-  "version": "0.2.0-beta.28",
+  "version": "0.2.0-beta.30",
   "type": "module",
   "scripts": {
     "dev": "vite",
