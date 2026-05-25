@@ -327,16 +327,16 @@ function App() {
   }, [status, selectedIndex, servers]);
 
   // 13.B/13.H: после успешного connect — авто-проверка IP/DNS leak.
-  // Задержка 1.5 сек чтобы туннель устаканился (REALITY handshake,
-  // прогрев, и т.п.). В TUN-режиме передаём null (через system route),
-  // в proxy-режиме — наш SOCKS5 порт.
+  // 3.5с задержка: TUN-туннель поднимается ~0.5с, но маршруты и DNS
+  // прогреваются ещё 1-2с. При 1.5с часть запросов уходила до того
+  // как туннель полностью готов → "не удалось получить публичный ip".
   useEffect(() => {
     if (status !== "running") return;
     if (!autoLeakTest) return;
     const port = mode === "proxy" ? socksPort : null;
     const timer = window.setTimeout(() => {
       void runLeakTest(port);
-    }, 1500);
+    }, 3500);
     return () => window.clearTimeout(timer);
   }, [status, autoLeakTest, mode, socksPort]);
 
