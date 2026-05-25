@@ -5,34 +5,14 @@ import { useSettingsStore } from "../stores/settingsStore";
 import { downloadAndInstall } from "../lib/updater";
 import { showToast } from "../stores/toastStore";
 
-/**
- * 14.A: модалка предложения обновления.
- *
- * Открывается когда `useAutoUpdateCheck` нашёл новую версию. Юзер
- * выбирает между «обновить сейчас», «позже» (dismiss этой версии до
- * следующей) и закрытием. При «обновить» — переключаемся в
- * `downloading` state, показываем прогресс-бар, после успешной
- * установки приложение перезапускается автоматически.
- */
+// Модалка предложения обновления. Сознательно минимальный UI:
+// только «текущая → новая версия», ничего из release notes / CHANGELOG /
+// installation boilerplate. tauri-action генерит шумный `notes` в
+// latest.json (auto-CHANGELOG из git log + installation template), а
+// auth-api proxy дополнительно стрипает его в пустую строку — но мы и
+// здесь не рендерим этот блок, чтобы fallback на github endpoint тоже
+// не показывал юзеру технический шум.
 
-/** Чистим release notes от технических ссылок которые юзеру не нужны:
- *  - markdown-ссылки `[text](url)` → оставляем только `text`
- *  - голые URL'ы https://github.com/... / api.example.com/... → удаляем
- *  - блоки с упоминаниями [Releases](...) / [commit](...) / [Release page]
- *  - fallback-строки от backend'а вида «See https://github.com/.../...»
- *  Юзер прямо просил: «не должен пользователь видеть ссылки на гитхаб». */
-function sanitizeNotes(raw: string): string {
-  let t = raw.trim();
-  // 1. Markdown-ссылки → текст без URL
-  t = t.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
-  // 2. Fallback "See https://github.com/..."
-  t = t.replace(/^See https?:\/\/github\.com\/\S*$/gim, "").trim();
-  // 3. Голые github / api.example ссылки — убираем
-  t = t.replace(/https?:\/\/(github\.com|api\.ariyvpn\.com|raw\.githubusercontent\.com)\S*/gi, "");
-  // 4. Двойные пустые строки после чистки → одиночные
-  t = t.replace(/\n{3,}/g, "\n\n");
-  return t.trim();
-}
 export function UpdateModal() {
   const { t } = useTranslation();
   const state = useUpdateStore((s) => s.state);
@@ -89,25 +69,6 @@ export function UpdateModal() {
           {t("modal.update.currentVersion")}{" "}
           <span style={{ color: "var(--fg)" }}>{update.currentVersion}</span>
         </div>
-        {update.notes ? (
-          <pre
-            className="recovery-text"
-            style={{
-              marginTop: 12,
-              maxHeight: 200,
-              overflowY: "auto",
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-              fontFamily: "var(--font-mono, monospace)",
-              fontSize: 12,
-              padding: 8,
-              background: "var(--bg-soft, rgba(255,255,255,0.04))",
-              borderRadius: 6,
-            }}
-          >
-            {sanitizeNotes(update.notes)}
-          </pre>
-        ) : null}
         {isDownloading ? (
           <div style={{ marginTop: 16 }}>
             <div
