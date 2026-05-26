@@ -1,5 +1,5 @@
 /**
- * Клиент к Ariy auth-api (`api.example.com`).
+ * Клиент к Ariy auth-api (`api.ariyvpn.com`).
  *
  * Endpoint'ы и flow — **точно повторяют** наше Chrome-расширение
  * (`vpn-extension/src/auth-api.js`). Контракт уже работает в продакшене,
@@ -11,7 +11,7 @@
 
 import { fetch } from "@tauri-apps/plugin-http";
 
-const API_BASE = "https://api.example.com";
+const API_BASE = "https://api.ariyvpn.com";
 const LOGIN_TIMEOUT_MS = 8000;
 
 export class AriyApiError extends Error {
