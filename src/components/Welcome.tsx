@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type DragEvent, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { invoke } from "@tauri-apps/api/core";
 import { useSubscriptionStore } from "../stores/subscriptionStore";
 import { useAuthStore } from "../stores/authStore";
-import { apiFetchAuthMe } from "../lib/ariy-api";
+import { apiFetchAuthMe, apiFetchTrialProxy } from "../lib/ariy-api";
 import { DASHBOARD_URL } from "../lib/constants";
 
 /**
@@ -43,6 +44,16 @@ export function Welcome() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const lastSessionToken = useRef<string | null>(null);
+  // beta.35: тоггл «Прокси для входа в Telegram» — если у юзера провайдер
+  // блочит t.me / api.ariyvpn.com / Telegram-серверы, юзер ВКЛЮЧАЕТ
+  // тумблер → клиент поднимает sing-box TUN с split-routing (только
+  // Telegram + api.ariyvpn.com через нашу trial-ноду в Финляндии,
+  // остальной трафик идёт DIRECT). Никаких system-proxy, никаких PAC —
+  // network-layer туннель работает для любого browser и для TG-приложения.
+  // На login success тумблер автоматически выключается.
+  const [tgProxyEnabled, setTgProxyEnabled] = useState(false);
+  const [tgProxyBusy, setTgProxyBusy] = useState(false);
+  const [tgProxyError, setTgProxyError] = useState<string | null>(null);
 
   // Login успешен — автоматом получаем sub_url через backend и
   // подставляем в subscriptionStore. Юзер сразу видит свою подписку,
@@ -81,11 +92,56 @@ export function Welcome() {
     }
   }, [sessionToken]);
 
-  // beta.34: открываем оригинальный `https://t.me/...` URL. Trial-proxy
-  // активирует PAC-script на старте `startTelegramLogin()`, который роутит
-  // Telegram-домены через нашу trial-ноду — браузер грузит t.me даже в
-  // censored сетях. `tg://` deep-link не помогает если у юзера нет TG
-  // приложения или у TG нет связи с серверами — beta.33 на этом провалилась.
+  // Auto-disconnect trial-TUN при успешном login. Юзер залогинился —
+  // дальше main VPN flow с подпиской, trial больше не нужен.
+  useEffect(() => {
+    if (!sessionToken) return;
+    if (!tgProxyEnabled) return;
+    void (async () => {
+      try {
+        await invoke("disconnect_trial_tun");
+      } catch (e) {
+        console.warn("[Welcome] disconnect_trial_tun on login failed:", e);
+      }
+      setTgProxyEnabled(false);
+    })();
+  }, [sessionToken, tgProxyEnabled]);
+
+  const onToggleTgProxy = async (next: boolean) => {
+    if (tgProxyBusy) return;
+    setTgProxyBusy(true);
+    setTgProxyError(null);
+    try {
+      if (next) {
+        const trial = await apiFetchTrialProxy();
+        if (!trial) throw new Error("сервер недоступен");
+        await invoke("connect_trial_tun", {
+          host: trial.host,
+          port: trial.port,
+          user: trial.user,
+          pass: trial.pass,
+        });
+        setTgProxyEnabled(true);
+      } else {
+        await invoke("disconnect_trial_tun");
+        setTgProxyEnabled(false);
+      }
+    } catch (e) {
+      console.error("[Welcome] toggle tg-proxy failed:", e);
+      setTgProxyError(String((e as Error).message ?? e));
+      // Если включение упало — оставляем выключенным; если выключение упало —
+      // оставляем visual on, но юзер видит ошибку.
+      if (next) setTgProxyEnabled(false);
+    } finally {
+      setTgProxyBusy(false);
+    }
+  };
+
+  // beta.35: trial-proxy управляется тумблером выше. `onClickTelegram` теперь
+  // просто стартует TG-poll и открывает t.me/login через дефолтный browser.
+  // Если у юзера тумблер ON → trial-TUN активен → t.me грузится через нашу
+  // ноду на network layer (любой browser/приложение). Если OFF → юзер
+  // ходит напрямую (если у него Telegram и так работает).
   const onClickTelegram = async () => {
     if (tg) {
       void openUrl(tg.loginUrl).catch(() => {});
@@ -178,6 +234,31 @@ export function Welcome() {
             </svg>
             <span>{t("welcome.login.tg")}</span>
           </button>
+
+          {/* Тоггл «Прокси для входа в Telegram» — для юзеров где
+              провайдер блокирует t.me / telegram.org. Включает sing-box
+              TUN с split-routing: только Telegram-домены через trial-ноду,
+              остальное direct. */}
+          <label className="ariy-tg-proxy-toggle">
+            <input
+              type="checkbox"
+              checked={tgProxyEnabled}
+              disabled={tgProxyBusy}
+              onChange={(e) => void onToggleTgProxy(e.target.checked)}
+            />
+            <span className="ariy-tg-proxy-toggle-label">
+              {tgProxyBusy
+                ? t("welcome.login.tgProxyConnecting")
+                : tgProxyEnabled
+                  ? t("welcome.login.tgProxyOn")
+                  : t("welcome.login.tgProxyOff")}
+            </span>
+          </label>
+          {tgProxyError && (
+            <p className="ariy-tg-proxy-error">
+              {t("welcome.login.tgProxyError")}: {tgProxyError}
+            </p>
+          )}
 
           <div className="ariy-divider">
             <span>{t("welcome.login.or")}</span>
