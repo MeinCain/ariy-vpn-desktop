@@ -67,6 +67,7 @@
       "tgPending": "Open the bot and confirm sign-in",
       "tgPendingHint": "We'll continue automatically once you tap 'Confirm' in the bot.",
       "tgReopen": "Open bot again",
+      "tgOpenInBrowser": "Open in browser (if Telegram is not installed)",
       "tgCancel": "Cancel",
       "err": {
         "invalidCredentials": "invalid email or password",
