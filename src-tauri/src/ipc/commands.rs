@@ -1338,21 +1338,29 @@ pub async fn connect_trial_proxy(
     });
     sing.start_with_config(&app, &config.to_string(), mixed_port)?;
     // Sing-box успевает забиндить mixed-port за ~500мс; даём 700мс
-    // запас на медленных машинах перед set_system_proxy.
+    // запас на медленных машинах перед регистрацией PAC.
     tokio::time::sleep(std::time::Duration::from_millis(700)).await;
-    // Mixed-inbound у sing-box одновременно SOCKS5 + HTTP/HTTPS на одном
-    // порту — ставим как HTTP/HTTPS-прокси (TG-app использует HTTPS).
-    platform::proxy::set_system_proxy(mixed_port, mixed_port).map_err(|e| e.to_string())?;
+    // beta.34: вместо глобального ProxyServer (который роутил весь трафик
+    // через одну trial-ноду — медленно и backwards-only для browsers) ставим
+    // PAC-script через `AutoConfigURL`. PAC роутит ТОЛЬКО Telegram-домены
+    // (t.me, telegram.org, web.telegram.org и др.) через локальный sing-box
+    // на 127.0.0.1:mixed_port. Остальной трафик идёт `DIRECT` — юзер не
+    // замечает замедления и пользуется сетью нормально пока логинится.
+    let pac_content = platform::proxy::build_telegram_pac(mixed_port);
+    platform::proxy::set_system_pac(&pac_content).map_err(|e| e.to_string())?;
     Ok(mixed_port)
 }
 
-/// Парная команда: гасим trial-sing-box + чистим system-proxy.
+/// Парная команда: гасим trial-sing-box + чистим PAC.
 /// Идемпотентна — если ничего не запущено, ничего не делает.
 #[tauri::command]
 pub async fn disconnect_trial_proxy(
     sing: State<'_, vpn::SingBoxState>,
 ) -> Result<(), String> {
     let _ = sing.stop();
+    // PAC от beta.34. На юзерах апдейтящихся с beta.31/32/33 параллельно
+    // может остаться глобальный ProxyServer — чистим оба для надёжности.
+    let _ = platform::proxy::clear_system_pac();
     let _ = platform::proxy::clear_system_proxy();
     Ok(())
 }
