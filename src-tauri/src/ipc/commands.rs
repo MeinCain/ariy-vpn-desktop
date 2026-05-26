@@ -1383,25 +1383,29 @@ pub async fn disconnect_trial_proxy(
 // автоматически вызывает disconnect_trial_tun() и переключается на normal
 // VPN flow с подпиской.
 //
-/// Запускает trial-TUN с split-routing на Telegram-домены.
+/// Запускает trial-TUN с VLESS+Reality outbound и split-routing на Telegram-домены.
+///
+/// beta.37: переход с HTTP-прокси на :8443 (узнаваемый CONNECT-формат) на
+/// VLESS+Reality на :443 — тот же стэк что main VPN, маскируется под
+/// TLS-handshake к настоящему сайту, обходит DPI намного лучше.
 #[tauri::command]
 pub async fn connect_trial_tun(
     app: tauri::AppHandle,
     sing: State<'_, vpn::SingBoxState>,
     host: String,
     port: u16,
-    user: String,
-    pass: String,
+    uuid: String,
+    flow: String,
+    sni: String,
+    pbk: String,
+    sid: String,
+    fp: String,
 ) -> Result<(), String> {
     let mixed_port = find_free_port(18100);
     let config = serde_json::json!({
         "log": { "level": "warn" },
         "dns": {
             "servers": [
-                // DNS-запросы Telegram-доменов должны резолвиться ВНУТРИ
-                // туннеля — иначе DNS у провайдера может вернуть фейковый
-                // IP (NXDOMAIN или Roskomnadzor-страница). Cloudflare DoH
-                // через trial-out обходит это.
                 { "tag": "remote", "address": "https://1.1.1.1/dns-query", "detour": "trial-out" },
                 { "tag": "local", "address": "local", "detour": "direct" }
             ],
@@ -1431,10 +1435,6 @@ pub async fn connect_trial_tun(
                 "stack": "system",
                 "sniff": true
             },
-            // Также mixed inbound на 127.0.0.1:<mixed_port> — нужен только
-            // для in-app fetch() запросов из webview (apiFetchTrialProxy и
-            // т.п.), которые НЕ ловятся TUN'ом (Tauri идёт через loopback
-            // напрямую). System proxy НЕ ставим — TUN покрывает остальное.
             {
                 "type": "mixed",
                 "tag": "trial-mixed-in",
@@ -1444,15 +1444,26 @@ pub async fn connect_trial_tun(
         ],
         "outbounds": [
             {
-                "type": "http",
+                "type": "vless",
                 "tag": "trial-out",
                 "server": host,
                 "server_port": port,
-                "username": user,
-                "password": pass,
+                "uuid": uuid,
+                "flow": flow,
+                "network": "tcp",
+                "packet_encoding": "xudp",
                 "tls": {
                     "enabled": true,
-                    "server_name": host,
+                    "server_name": sni,
+                    "utls": {
+                        "enabled": true,
+                        "fingerprint": fp,
+                    },
+                    "reality": {
+                        "enabled": true,
+                        "public_key": pbk,
+                        "short_id": sid,
+                    }
                 }
             },
             { "type": "direct", "tag": "direct" }
@@ -1460,7 +1471,7 @@ pub async fn connect_trial_tun(
         "route": {
             "rules": [
                 // Сам трафик к trial-ноде должен идти DIRECT (иначе loop).
-                { "ip_cidr": [], "domain": [host.clone()], "outbound": "direct" },
+                { "domain": [host.clone()], "outbound": "direct" },
                 // mixed inbound из in-app fetch — ВСЕГДА через trial
                 // (он используется для anonymous login flow с auth-api).
                 { "inbound": ["trial-mixed-in"], "outbound": "trial-out" },
@@ -1475,8 +1486,7 @@ pub async fn connect_trial_tun(
                 },
                 // api.ariyvpn.com через trial-out — критично для polling'а
                 // /v1/auth/telegram/poll если у юзера auth-api заблокирован
-                // в его сети (хотя обычно нет — он только что туда зашёл
-                // за trial creds, значит работает).
+                // в его сети.
                 { "domain": "api.ariyvpn.com", "outbound": "trial-out" },
             ],
             "final": "direct",
@@ -1485,8 +1495,6 @@ pub async fn connect_trial_tun(
     });
 
     sing.start_with_config(&app, &config.to_string(), mixed_port)?;
-    // Sing-box создаёт WinTUN adapter и применяет routes за ~1-2 сек.
-    // Даём 2 секунды на полную готовность перед возвратом.
     tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
     Ok(())
 }
