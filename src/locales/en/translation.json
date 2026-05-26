@@ -69,6 +69,10 @@
       "tgReopen": "Open bot again",
       "tgOpenInBrowser": "Open in browser (if Telegram is not installed)",
       "tgCancel": "Cancel",
+      "tgProxyOff": "Enable proxy for Telegram login (if your ISP blocks it)",
+      "tgProxyOn": "Telegram-login proxy is active",
+      "tgProxyConnecting": "Connecting to login server…",
+      "tgProxyError": "Failed to enable proxy",
       "err": {
         "invalidCredentials": "invalid email or password",
         "rateLimited": "too many attempts, please wait a minute",
