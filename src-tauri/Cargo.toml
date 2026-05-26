@@ -1,6 +1,6 @@
 [package]
 name = "vpn-client"
-version = "0.2.0-beta.31"
+version = "0.2.0-beta.32"
 description = "Ariy VPN desktop client"
 authors = ["Ariy VPN"]
 edition = "2021"
@@ -43,7 +43,7 @@ tauri-plugin-process = "2"
 # Action Center когда окно свёрнуто/в трее. При видимом окне используем
 # in-app Toaster — нативные нужны именно когда юзер не смотрит на app.
 tauri-plugin-notification = "2"
-# HTTP-плагин — для frontend'а: fetch к api.example.com из WebView с
+# HTTP-плагин — для frontend'а: fetch к api.ariyvpn.com из WebView с
 # обходом CORS-preflight. WebView2 origin = `tauri://localhost`, и
 # обычный window.fetch падает с TypeError: Failed to fetch если бэк не
 # разрешает этот origin. Плагин делает запрос из Rust → CORS не применяется.
