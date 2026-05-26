@@ -23,6 +23,8 @@ const INET_SETTINGS: &str =
 
 const BACKUP_DIR: &str = "AriyVPN";
 const BACKUP_FILE: &str = "proxy_backup.json";
+const PAC_BACKUP_FILE: &str = "pac_backup.json";
+const PAC_FILE: &str = "trial-pac.js";
 
 /// Снимок настроек системного прокси для backup/restore.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -369,4 +371,191 @@ fn apply_backup(backup: &ProxyBackup) -> Result<()> {
         }
     }
     Ok(())
+}
+
+// ─── PAC (Proxy Auto-Config) mode — beta.34 ────────────────────────────────
+//
+// Для trial-proxy login flow используем PAC вместо глобального ProxyServer,
+// чтобы НЕ роутить весь трафик юзера через одну медленную trial-ноду — только
+// домены Telegram. Юзер может пользоваться остальной сетью без замедления,
+// и при этом t.me / web.telegram.org доступны (для логина в censored сетях).
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct PacBackup {
+    /// Значение `AutoConfigURL`. None — ключ отсутствовал.
+    auto_config_url: Option<String>,
+}
+
+fn pac_backup_path() -> Option<PathBuf> {
+    #[cfg(windows)]
+    {
+        let local = std::env::var_os("LOCALAPPDATA")?;
+        Some(PathBuf::from(local).join(BACKUP_DIR).join(PAC_BACKUP_FILE))
+    }
+    #[cfg(not(windows))]
+    {
+        let base = std::env::var_os("XDG_DATA_HOME")
+            .map(PathBuf::from)
+            .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/share")))?;
+        Some(base.join(BACKUP_DIR).join(PAC_BACKUP_FILE))
+    }
+}
+
+/// Путь к PAC-скрипту: `%LOCALAPPDATA%\AriyVPN\trial-pac.js`. Файл должен
+/// существовать чтобы Windows смог его прочитать по `file:///` URL.
+pub fn pac_file_path() -> Option<PathBuf> {
+    #[cfg(windows)]
+    {
+        let local = std::env::var_os("LOCALAPPDATA")?;
+        Some(PathBuf::from(local).join(BACKUP_DIR).join(PAC_FILE))
+    }
+    #[cfg(not(windows))]
+    {
+        let base = std::env::var_os("XDG_DATA_HOME")
+            .map(PathBuf::from)
+            .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/share")))?;
+        Some(base.join(BACKUP_DIR).join(PAC_FILE))
+    }
+}
+
+fn save_pac_backup(backup: &PacBackup) {
+    let Some(path) = pac_backup_path() else { return };
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if let Ok(json) = serde_json::to_string_pretty(backup) {
+        let _ = std::fs::write(&path, json);
+    }
+}
+
+fn delete_pac_backup() {
+    if let Some(path) = pac_backup_path() {
+        let _ = std::fs::remove_file(path);
+    }
+}
+
+fn read_pac_backup() -> Option<PacBackup> {
+    let path = pac_backup_path()?;
+    let data = std::fs::read_to_string(path).ok()?;
+    serde_json::from_str(&data).ok()
+}
+
+fn has_pending_pac_backup() -> bool {
+    pac_backup_path().map(|p| p.is_file()).unwrap_or(false)
+}
+
+/// Сгенерировать PAC-скрипт который роутит только Telegram-домены через
+/// локальный proxy (`127.0.0.1:port`, поднятый sing-box'ом trial-proxy).
+/// Остальной трафик идёт `DIRECT` — юзер не замечает замедления.
+pub fn build_telegram_pac(proxy_port: u16) -> String {
+    format!(
+r#"function FindProxyForURL(url, host) {{
+    var h = host.toLowerCase();
+    if (h === "t.me" || dnsDomainIs(h, ".t.me") ||
+        h === "telegram.org" || dnsDomainIs(h, ".telegram.org") ||
+        h === "web.telegram.org" ||
+        h === "telegram-cdn.org" || dnsDomainIs(h, ".telegram-cdn.org") ||
+        h === "telesco.pe" || dnsDomainIs(h, ".telesco.pe") ||
+        h === "tdesktop.com" || dnsDomainIs(h, ".tdesktop.com") ||
+        h === "fragment.com" || dnsDomainIs(h, ".fragment.com")) {{
+        return "PROXY 127.0.0.1:{port}";
+    }}
+    return "DIRECT";
+}}
+"#,
+        port = proxy_port
+    )
+}
+
+/// Записать PAC-скрипт в `%LOCALAPPDATA%\AriyVPN\trial-pac.js` и
+/// зарегистрировать его в Windows registry через `AutoConfigURL`. Backup
+/// прежнего значения `AutoConfigURL` сохраняется в отдельный файл для
+/// последующего restore'а.
+///
+/// **PAC работает параллельно** с глобальным `ProxyServer`: если юзер
+/// одновременно запустит main VPN (proxy mode) — Windows применяет PAC,
+/// поэтому мы НЕ трогаем `ProxyEnable`/`ProxyServer` здесь (это домен
+/// `set_system_proxy`/`clear_system_proxy`).
+pub fn set_system_pac(pac_content: &str) -> Result<()> {
+    #[cfg(windows)]
+    {
+        let pac_file = pac_file_path().context("LOCALAPPDATA недоступен")?;
+        if let Some(parent) = pac_file.parent() {
+            std::fs::create_dir_all(parent).context("create_dir_all для PAC")?;
+        }
+        std::fs::write(&pac_file, pac_content).context("write PAC")?;
+
+        // file:/// URL формата `file:///C:/Users/.../trial-pac.js` — Windows
+        // WinInet понимает оба варианта (с и без backslash → forward slash).
+        let pac_url = format!(
+            "file:///{}",
+            pac_file.display().to_string().replace('\\', "/")
+        );
+
+        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+        // Сохраняем backup существующего AutoConfigURL (если был) — на случай
+        // что юзер настраивал его сам для корпоративного PAC. После teardown
+        // восстановим.
+        if !has_pending_pac_backup() {
+            if let Ok(key) = hkcu.open_subkey(INET_SETTINGS) {
+                let backup = PacBackup {
+                    auto_config_url: key.get_value("AutoConfigURL").ok(),
+                };
+                save_pac_backup(&backup);
+            }
+        }
+
+        let (key, _) = hkcu
+            .create_subkey(INET_SETTINGS)
+            .context("не удалось открыть Internet Settings в реестре")?;
+        key.set_value("AutoConfigURL", &pac_url)
+            .context("AutoConfigURL")?;
+
+        Ok(())
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = pac_content;
+        Ok(())
+    }
+}
+
+/// Восстановить `AutoConfigURL` из PAC backup'а. Удаляет PAC-файл и
+/// backup-файл.
+pub fn clear_system_pac() -> Result<()> {
+    #[cfg(windows)]
+    {
+        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+        let (key, _) = hkcu
+            .create_subkey(INET_SETTINGS)
+            .context("не удалось открыть Internet Settings в реестре")?;
+
+        if let Some(backup) = read_pac_backup() {
+            match backup.auto_config_url {
+                Some(url) => {
+                    key.set_value("AutoConfigURL", &url)
+                        .context("restore AutoConfigURL")?;
+                }
+                None => {
+                    let _ = key.delete_value("AutoConfigURL");
+                }
+            }
+            delete_pac_backup();
+        } else {
+            // Нет backup'а — на всякий случай чистим (вдруг наш PAC остался
+            // от прерванной прошлой сессии без backup'а).
+            let _ = key.delete_value("AutoConfigURL");
+        }
+
+        // PAC-файл больше не нужен — удаляем чтобы не оставлять мусор.
+        if let Some(path) = pac_file_path() {
+            let _ = std::fs::remove_file(path);
+        }
+
+        Ok(())
+    }
+    #[cfg(not(windows))]
+    {
+        Ok(())
+    }
 }
