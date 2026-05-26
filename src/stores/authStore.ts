@@ -158,33 +158,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (get().busy) return { ok: false, code: "busy", message: "уже идёт логин" };
     set({ busy: true });
     try {
-      // Сначала поднимаем trial-proxy, потом обращаемся к auth-api и сразу
-      // возвращаемся — Welcome.tsx после `await startTg()` делает openUrl()
-      // мгновенно, browser уже идёт через активный system-proxy (важно для
-      // юзеров где провайдер блочит t.me и api.example.com).
-      //
-      // beta.30 пробовала разнести trial-proxy на потом (чтобы telegramStart
-      // не шёл через лишний хоп) — но это блокировало возврат в Welcome.tsx
-      // ещё на 2-3 секунды после telegramStart(), и юзер видел "кнопка
-      // нажата — ничего не происходит". Возврат к порядку beta.29.
-      try {
-        const { invoke } = await import("@tauri-apps/api/core");
-        const { apiFetchTrialProxy } = await import("../lib/ariy-api");
-        const trial = await apiFetchTrialProxy();
-        if (trial) {
-          await invoke("connect_trial_proxy", {
-            host: trial.host,
-            port: trial.port,
-            user: trial.user,
-            pass: trial.pass,
-          });
-          console.log("[authStore] trial-proxy активирован для TG-login");
-        }
-      } catch (e) {
-        // Trial-proxy не критичен — юзер с рабочим Telegram пройдёт без него.
-        console.warn("[authStore] trial-proxy preflight failed:", e);
-      }
-
+      // beta.35: trial-proxy/PAC автоматическая активация удалена. Теперь юзер
+      // включает trial-TUN через toggle в Welcome screen сам если у него
+      // Telegram заблокирован. Toggle поднимает TUN-туннель с split-routing —
+      // через него идёт `telegramStart()` и `openUrl(t.me/...)`, а остальной
+      // трафик direct. Если у юзера Telegram работает напрямую — toggle off,
+      // login flow идёт обычным маршрутом без VPN.
       const resp = await telegramStart();
       const tg: TgLoginState = {
         state: resp.state,
@@ -200,7 +179,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (Date.now() > current.expiresAt) {
           stopTgPoll();
           set({ tg: null });
-          void teardownTrialProxy();
           return;
         }
         try {
@@ -212,12 +190,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             // После успешного login → trial больше не нужен, гасим его
             // и чистим system-proxy. Дальше юзер подключится к своей
             // подписке через нормальный flow.
-            void teardownTrialProxy();
-          } else if (pollResp.status === "expired" || pollResp.status === "error") {
+            } else if (pollResp.status === "expired" || pollResp.status === "error") {
             stopTgPoll();
             set({ tg: null });
-            void teardownTrialProxy();
-          }
+            }
           // pending — продолжаем
         } catch { /* транзиент сети — попробуем на следующем тике */ }
       }, 3000);
@@ -226,7 +202,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (e) {
       set({ busy: false });
       console.error("[authStore] startTelegramLogin exception", e);
-      void teardownTrialProxy();
       if (e instanceof AriyApiError) return { ok: false, code: e.code, message: e.message };
       return { ok: false, code: "network", message: (e as Error).message ?? "сеть недоступна" };
     }
@@ -235,7 +210,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   cancelTelegramLogin() {
     stopTgPoll();
     set({ tg: null });
-    void teardownTrialProxy();
   },
 
   async logout() {
@@ -243,16 +217,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     stopTgPoll();
     set({ sessionToken: null, tg: null, plan: null, email: null, telegramId: null });
     persist({ sessionToken: null });
-    void teardownTrialProxy();
     if (token) await apiLogout(token);
   },
 }));
 
-async function teardownTrialProxy() {
-  try {
-    const { invoke } = await import("@tauri-apps/api/core");
-    await invoke("disconnect_trial_proxy");
-  } catch (e) {
-    console.warn("[authStore] teardownTrialProxy failed:", e);
-  }
-}
+// beta.35: teardownTrialProxy удалён. Trial-TUN управляется toggle'ом в
+// Welcome.tsx. Auto-disconnect при login success делается там же через
+// useEffect на sessionToken change. AuthStore больше не управляет trial.
