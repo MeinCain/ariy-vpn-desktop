@@ -1365,6 +1365,145 @@ pub async fn disconnect_trial_proxy(
     Ok(())
 }
 
+// ─── Trial-TUN (beta.35) ────────────────────────────────────────────────────
+//
+// Поднимает sing-box с TUN inbound и split-routing: только Telegram-домены
+// (+ api.ariyvpn.com на случай если у юзера он заблокирован) идут через
+// trial-ноду, остальной трафик — DIRECT. Работает на network layer:
+//
+//   - Не зависит от default browser (Firefox, Edge, Chrome — всё одинаково).
+//   - Не зависит от system-proxy / PAC / WinINet кеширования.
+//   - TG-приложение тоже подхватит туннель — может залогинить если у юзера
+//     был раньше залогинен в TG.
+//
+// WinTUN driver устанавливается NSIS installer'ом, sing-box создаёт adapter
+// из user-mode без UAC. WFP rules не нужны (split-routing, не kill-switch).
+//
+// Юзер активирует это через toggle в Welcome screen. На login success клиент
+// автоматически вызывает disconnect_trial_tun() и переключается на normal
+// VPN flow с подпиской.
+//
+/// Запускает trial-TUN с split-routing на Telegram-домены.
+#[tauri::command]
+pub async fn connect_trial_tun(
+    app: tauri::AppHandle,
+    sing: State<'_, vpn::SingBoxState>,
+    host: String,
+    port: u16,
+    user: String,
+    pass: String,
+) -> Result<(), String> {
+    let mixed_port = find_free_port(18100);
+    let config = serde_json::json!({
+        "log": { "level": "warn" },
+        "dns": {
+            "servers": [
+                // DNS-запросы Telegram-доменов должны резолвиться ВНУТРИ
+                // туннеля — иначе DNS у провайдера может вернуть фейковый
+                // IP (NXDOMAIN или Roskomnadzor-страница). Cloudflare DoH
+                // через trial-out обходит это.
+                { "tag": "remote", "address": "https://1.1.1.1/dns-query", "detour": "trial-out" },
+                { "tag": "local", "address": "local", "detour": "direct" }
+            ],
+            "rules": [
+                {
+                    "domain_suffix": [
+                        "t.me", "telegram.org", "telegram-cdn.org",
+                        "telesco.pe", "fragment.com", "tdesktop.com",
+                        "tg.dev", "tg.me"
+                    ],
+                    "server": "remote"
+                },
+                { "domain": "api.ariyvpn.com", "server": "remote" }
+            ],
+            "final": "local",
+            "strategy": "ipv4_only"
+        },
+        "inbounds": [
+            {
+                "type": "tun",
+                "tag": "tun-in",
+                "interface_name": "ariy-trial",
+                "address": ["172.18.0.1/30"],
+                "mtu": 1500,
+                "auto_route": true,
+                "strict_route": false,
+                "stack": "system",
+                "sniff": true
+            },
+            // Также mixed inbound на 127.0.0.1:<mixed_port> — нужен только
+            // для in-app fetch() запросов из webview (apiFetchTrialProxy и
+            // т.п.), которые НЕ ловятся TUN'ом (Tauri идёт через loopback
+            // напрямую). System proxy НЕ ставим — TUN покрывает остальное.
+            {
+                "type": "mixed",
+                "tag": "trial-mixed-in",
+                "listen": "127.0.0.1",
+                "listen_port": mixed_port
+            }
+        ],
+        "outbounds": [
+            {
+                "type": "http",
+                "tag": "trial-out",
+                "server": host,
+                "server_port": port,
+                "username": user,
+                "password": pass,
+                "tls": {
+                    "enabled": true,
+                    "server_name": host,
+                }
+            },
+            { "type": "direct", "tag": "direct" }
+        ],
+        "route": {
+            "rules": [
+                // Сам трафик к trial-ноде должен идти DIRECT (иначе loop).
+                { "ip_cidr": [], "domain": [host.clone()], "outbound": "direct" },
+                // mixed inbound из in-app fetch — ВСЕГДА через trial
+                // (он используется для anonymous login flow с auth-api).
+                { "inbound": ["trial-mixed-in"], "outbound": "trial-out" },
+                // Telegram domains → trial. Остальное direct.
+                {
+                    "domain_suffix": [
+                        "t.me", "telegram.org", "telegram-cdn.org",
+                        "telesco.pe", "fragment.com", "tdesktop.com",
+                        "tg.dev", "tg.me"
+                    ],
+                    "outbound": "trial-out"
+                },
+                // api.ariyvpn.com через trial-out — критично для polling'а
+                // /v1/auth/telegram/poll если у юзера auth-api заблокирован
+                // в его сети (хотя обычно нет — он только что туда зашёл
+                // за trial creds, значит работает).
+                { "domain": "api.ariyvpn.com", "outbound": "trial-out" },
+            ],
+            "final": "direct",
+            "auto_detect_interface": true
+        }
+    });
+
+    sing.start_with_config(&app, &config.to_string(), mixed_port)?;
+    // Sing-box создаёт WinTUN adapter и применяет routes за ~1-2 сек.
+    // Даём 2 секунды на полную готовность перед возвратом.
+    tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
+    Ok(())
+}
+
+/// Гасит trial-TUN. После stop sing-box сам удаляет WinTUN adapter и
+/// снимает auto-routes. Идемпотентна — если ничего не запущено, no-op.
+#[tauri::command]
+pub async fn disconnect_trial_tun(
+    sing: State<'_, vpn::SingBoxState>,
+) -> Result<(), String> {
+    let _ = sing.stop();
+    // На всякий случай чистим возможные остатки от старых билдов (beta.32+).
+    let _ = platform::proxy::clear_system_pac();
+    let _ = platform::proxy::clear_system_proxy();
+    Ok(())
+}
+
 // ─── Connection ping (Settings → пинг) ──────────────────────────────────────
 
 /// Замерить ping заданным методом (TCP / HTTP-GET / HTTP-HEAD).
