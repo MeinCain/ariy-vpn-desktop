@@ -1,6 +1,6 @@
 [package]
 name = "vpn-client"
-version = "0.2.0-beta.32"
+version = "0.2.0-beta.33"
 description = "Ariy VPN desktop client"
 authors = ["Ariy VPN"]
 edition = "2021"
