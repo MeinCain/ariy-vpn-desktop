@@ -2,7 +2,7 @@
 
 /* Ariy VPN — десктопный клиент, mobile-first дизайн с адаптивом под десктоп.
    Эстетика: тёмная navy палитра + brand-blue акценты, мягкие скругления,
-   glass-blur. Palette подсмотрена с example.com (shadcn/ui dark theme):
+   glass-blur. Palette подсмотрена с ariyvpn.com (shadcn/ui dark theme):
      --primary  217 91% 60%  → #3b82f6  (Tailwind blue-500, наш brand)
      --primary-glow  213 94% 72%  → #7eb9fa
      --background  220 45% 6%  → #080b16  (deep navy) */
@@ -4238,7 +4238,7 @@ input, textarea { font: inherit; cursor: text; }
 .link-btn:focus-visible { outline: 1px dashed var(--fg-mute); outline-offset: 2px; }
 
 /* ─────────────────────────────────────────────────────────────────────
-   Ariy Welcome — стиль по дизайну example.com
+   Ariy Welcome — стиль по дизайну ariyvpn.com
    Hero-логотип + TG-CTA + список ссылок. Тёмно-синий фон, brand-blue
    градиент на главной кнопке.
    ───────────────────────────────────────────────────────────────────── */
@@ -4350,6 +4350,45 @@ input, textarea { font: inherit; cursor: text; }
 .ariy-link-stack {
   display: flex; flex-direction: column; gap: 12px;
   margin-top: 2px;
+}
+
+/* beta.35: тоггл «прокси для входа в Telegram» — между TG-кнопкой и
+   разделителем «или». Маленький, не агрессивный — большинство юзеров
+   его не трогает, нужен только тем у кого провайдер блочит Telegram. */
+.ariy-tg-proxy-toggle {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin-top: 10px;
+  font-family: var(--display);
+  font-size: 12px;
+  line-height: 1.35;
+  color: rgba(170, 181, 207, 0.78);
+  cursor: pointer;
+  user-select: none;
+}
+.ariy-tg-proxy-toggle input[type="checkbox"] {
+  margin: 2px 0 0 0;
+  width: 14px; height: 14px;
+  accent-color: #3b82f6;
+  cursor: pointer;
+}
+.ariy-tg-proxy-toggle input[type="checkbox"]:disabled {
+  cursor: progress;
+}
+.ariy-tg-proxy-toggle:hover .ariy-tg-proxy-toggle-label {
+  color: rgba(220, 226, 240, 0.95);
+}
+.ariy-tg-proxy-toggle-label {
+  flex: 1;
+  transition: color 120ms ease;
+}
+.ariy-tg-proxy-error {
+  margin: 6px 0 0 0;
+  padding: 6px 8px;
+  background: rgba(220, 60, 60, 0.12);
+  border: 1px solid rgba(220, 60, 60, 0.3);
+  border-radius: 6px;
+  font-size: 11px;
+  color: rgba(255, 180, 180, 0.9);
 }
 .ariy-link {
   background: transparent;
