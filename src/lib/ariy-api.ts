@@ -268,3 +268,56 @@ export async function apiFetchTrialProxy(): Promise<TrialProxyResponse | null> {
     };
   } catch { return null; }
 }
+
+// beta.37: VLESS+Reality endpoint для trial-TUN. На auth-api сервере
+// хранится один VLESS URI (для специального AUTH юзера в Remnawave с
+// unlimited devices), endpoint парсит его и отдаёт sing-box-ready параметры.
+// Используется вместо apiFetchTrialProxy (HTTP-прокси на :8443) — VLESS
+// маскируется под TLS-handshake к настоящему сайту, обходит DPI намного лучше.
+
+export type TrialVlessResponse = {
+  host: string;
+  port: number;
+  uuid: string;
+  flow: string;
+  sni: string;
+  pbk: string;
+  sid: string;
+  fp: string;
+  network: string;
+  security: string;
+};
+
+export async function apiFetchTrialVless(): Promise<TrialVlessResponse | null> {
+  let r: Response;
+  try {
+    r = await fetch(`${API_BASE}/v1/auth/trial-vless`, {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+      connectTimeout: LOGIN_TIMEOUT_MS,
+    });
+  } catch (e) {
+    console.warn('[ariy-api] trial-vless failed:', e);
+    return null;
+  }
+  if (!r.ok) {
+    console.warn('[ariy-api] trial-vless non-ok status:', r.status);
+    return null;
+  }
+  try {
+    const body: any = await r.json();
+    if (!body || !body.host || !body.uuid || !body.pbk) return null;
+    return {
+      host: body.host,
+      port: body.port,
+      uuid: body.uuid,
+      flow: body.flow || 'xtls-rprx-vision',
+      sni: body.sni || body.host,
+      pbk: body.pbk,
+      sid: body.sid || '',
+      fp: body.fp || 'chrome',
+      network: body.network || 'tcp',
+      security: body.security || 'reality',
+    };
+  } catch { return null; }
+}
