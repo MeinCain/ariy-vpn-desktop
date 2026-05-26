@@ -4352,12 +4352,13 @@ input, textarea { font: inherit; cursor: text; }
   margin-top: 2px;
 }
 
-/* beta.35: тоггл «прокси для входа в Telegram» — между TG-кнопкой и
-   разделителем «или». Маленький, не агрессивный — большинство юзеров
-   его не трогает, нужен только тем у кого провайдер блочит Telegram. */
+/* beta.35/36: тоггл «прокси для входа в Telegram» — между TG-кнопкой и
+   разделителем «или». iOS-style switch (custom CSS), не дефолтный Windows
+   checkbox. Маленький, не агрессивный — большинство юзеров его не трогает,
+   нужен только тем у кого провайдер блочит Telegram. */
 .ariy-tg-proxy-toggle {
-  display: flex; align-items: flex-start; gap: 8px;
-  margin-top: 10px;
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 12px;
   font-family: var(--display);
   font-size: 12px;
   line-height: 1.35;
@@ -4365,13 +4366,41 @@ input, textarea { font: inherit; cursor: text; }
   cursor: pointer;
   user-select: none;
 }
-.ariy-tg-proxy-toggle input[type="checkbox"] {
-  margin: 2px 0 0 0;
-  width: 14px; height: 14px;
-  accent-color: #3b82f6;
-  cursor: pointer;
+/* Скрываем native checkbox — он рендерится поверх slider через absolute. */
+.ariy-toggle-input {
+  position: absolute;
+  width: 0; height: 0;
+  opacity: 0;
+  pointer-events: none;
 }
-.ariy-tg-proxy-toggle input[type="checkbox"]:disabled {
+/* Слайдер — track + ползунок (через ::before). Off-state — серый, on — brand. */
+.ariy-toggle-slider {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  width: 34px; height: 20px;
+  background: rgba(170, 181, 207, 0.25);
+  border-radius: 10px;
+  transition: background 180ms ease;
+}
+.ariy-toggle-slider::before {
+  content: "";
+  position: absolute;
+  left: 2px; top: 2px;
+  width: 16px; height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: transform 180ms ease;
+}
+.ariy-toggle-input:checked + .ariy-toggle-slider {
+  background: #3b82f6;
+}
+.ariy-toggle-input:checked + .ariy-toggle-slider::before {
+  transform: translateX(14px);
+}
+.ariy-toggle-input:disabled + .ariy-toggle-slider {
+  opacity: 0.55;
   cursor: progress;
 }
 .ariy-tg-proxy-toggle:hover .ariy-tg-proxy-toggle-label {
