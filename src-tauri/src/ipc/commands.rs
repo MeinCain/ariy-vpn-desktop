@@ -1404,25 +1404,13 @@ pub async fn connect_trial_tun(
     let mixed_port = find_free_port(18100);
     let config = serde_json::json!({
         "log": { "level": "warn" },
-        "dns": {
-            "servers": [
-                { "tag": "remote", "address": "https://1.1.1.1/dns-query", "detour": "trial-out" },
-                { "tag": "local", "address": "local", "detour": "direct" }
-            ],
-            "rules": [
-                {
-                    "domain_suffix": [
-                        "t.me", "telegram.org", "telegram-cdn.org",
-                        "telesco.pe", "fragment.com", "tdesktop.com",
-                        "tg.dev", "tg.me"
-                    ],
-                    "server": "remote"
-                },
-                { "domain": "api.ariyvpn.com", "server": "remote" }
-            ],
-            "final": "local",
-            "strategy": "ipv4_only"
-        },
+        // beta.38: DNS-блок убран — sing-box 1.12+ deprecated legacy DNS format,
+        // и наш конфиг падал с FATAL до создания TUN-адаптера. У юзеров что
+        // мы видели Chrome даёт «превышено время ожидания», не «не удаётся
+        // resolve» — это значит DNS у провайдера резолвит Telegram-домены
+        // (TCP-blocking, не DNS-poisoning). Поэтому system DNS через `direct`
+        // outbound достаточен. Если потом окажется что у части юзеров есть
+        // DNS-poisoning — мигрируем на новый DNS format sing-box 1.12+.
         "inbounds": [
             {
                 "type": "tun",
