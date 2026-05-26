@@ -7,7 +7,7 @@ import { apiFetchAuthMe } from "../lib/ariy-api";
 import { DASHBOARD_URL } from "../lib/constants";
 
 /**
- * Welcome — стартовый экран по дизайну example.com.
+ * Welcome — стартовый экран по дизайну ariyvpn.com.
  *
  * Layout (сверху вниз):
  *   1. Hero — логотип Ariy + name + subtitle
@@ -81,15 +81,31 @@ export function Welcome() {
     }
   }, [sessionToken]);
 
+  // auth-api возвращает loginUrl как `https://t.me/AriyVPN_Bot?start=webauth_xxx`.
+  // Для юзеров в сетях где t.me заблокирован (а это весь смысл VPN) browser
+  // не загружает страницу даже через system-proxy — Firefox его игнорирует,
+  // trial-нода может лежать. Поэтому преобразуем в `tg://resolve?domain=...`
+  // — это IPC к установленному Telegram-приложению (использует MTProto со
+  // встроенными обходами цензуры). Browser вообще не задействуется.
+  //
+  // Fallback на оригинальный t.me URL — кнопка «Открыть в браузере» в
+  // pending-блоке ниже (для редкого случая когда TG-приложение не установлено).
+  const toTgDeepLink = (httpsUrl: string): string => {
+    const m = httpsUrl.match(/^https?:\/\/t\.me\/([^/?]+)\?start=(.+)$/i);
+    if (!m) return httpsUrl;
+    const [, bot, startParam] = m;
+    return `tg://resolve?domain=${bot}&start=${startParam}`;
+  };
+
   const onClickTelegram = async () => {
     if (tg) {
-      void openUrl(tg.loginUrl).catch(() => {});
+      void openUrl(toTgDeepLink(tg.loginUrl)).catch(() => {});
       return;
     }
     const res = await startTg();
     if (res.ok) {
       const fresh = useAuthStore.getState().tg;
-      if (fresh) void openUrl(fresh.loginUrl).catch(() => {});
+      if (fresh) void openUrl(toTgDeepLink(fresh.loginUrl)).catch(() => {});
     } else {
       setEmailError(res.message);
     }
@@ -150,8 +166,15 @@ export function Welcome() {
         <div className="ariy-tg-pending">
           <p className="ariy-tg-pending-title">{t("welcome.login.tgPending")}</p>
           <p className="ariy-tg-pending-hint">{t("welcome.login.tgPendingHint")}</p>
-          <button type="button" className="ariy-cta ariy-cta-secondary" onClick={() => openUrl(tg.loginUrl).catch(() => {})}>
+          <button type="button" className="ariy-cta ariy-cta-secondary" onClick={() => openUrl(toTgDeepLink(tg.loginUrl)).catch(() => {})}>
             {t("welcome.login.tgReopen")}
+          </button>
+          {/* Fallback для редкого случая когда TG-приложение не установлено
+              на устройстве — открываем https://t.me/... через дефолтный
+              браузер. Если у юзера в сети заблокирован t.me — это не
+              сработает, но альтернативы нет, юзер должен поставить TG. */}
+          <button type="button" className="ariy-link-btn" onClick={() => openUrl(tg.loginUrl).catch(() => {})}>
+            {t("welcome.login.tgOpenInBrowser")}
           </button>
           <button type="button" className="ariy-link-btn" onClick={cancelTg}>
             {t("welcome.login.tgCancel")}
