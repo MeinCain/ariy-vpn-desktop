@@ -22,6 +22,7 @@ use ipc::commands::{
     routing_list, routing_refresh, routing_remove, routing_set_active, secure_storage_delete,
     secure_storage_get, secure_storage_set, show_floating_window, shutdown_helper,
     force_quit, tray_set_status, connect_trial_proxy, disconnect_trial_proxy,
+    connect_trial_tun, disconnect_trial_tun,
     KillSwitchState,
 };
 use vpn::{MihomoState, SingBoxState};
@@ -70,7 +71,7 @@ pub fn run() {
         // под именем productName из tauri.conf.json.
         .plugin(tauri_plugin_notification::init())
         // HTTP-плагин для frontend'а: чтобы наш ariy-api.ts мог fetch'ить
-        // api.example.com из WebView2 минуя CORS. Без него обычный
+        // api.ariyvpn.com из WebView2 минуя CORS. Без него обычный
         // window.fetch падает с TypeError: Failed to fetch если бэк не
         // разрешает origin `tauri://localhost`.
         .plugin(tauri_plugin_http::init())
@@ -218,6 +219,8 @@ pub fn run() {
             force_quit,
             connect_trial_proxy,
             disconnect_trial_proxy,
+            connect_trial_tun,
+            disconnect_trial_tun,
             export_diagnostics,
             export_settings_to_documents,
             fetch_settings_backup,
