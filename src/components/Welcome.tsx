@@ -4,7 +4,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { invoke } from "@tauri-apps/api/core";
 import { useSubscriptionStore } from "../stores/subscriptionStore";
 import { useAuthStore } from "../stores/authStore";
-import { apiFetchAuthMe, apiFetchTrialProxy } from "../lib/ariy-api";
+import { apiFetchAuthMe, apiFetchTrialVless } from "../lib/ariy-api";
 import { DASHBOARD_URL } from "../lib/constants";
 
 /**
@@ -113,13 +113,17 @@ export function Welcome() {
     setTgProxyError(null);
     try {
       if (next) {
-        const trial = await apiFetchTrialProxy();
+        const trial = await apiFetchTrialVless();
         if (!trial) throw new Error("сервер недоступен");
         await invoke("connect_trial_tun", {
           host: trial.host,
           port: trial.port,
-          user: trial.user,
-          pass: trial.pass,
+          uuid: trial.uuid,
+          flow: trial.flow,
+          sni: trial.sni,
+          pbk: trial.pbk,
+          sid: trial.sid,
+          fp: trial.fp,
         });
         setTgProxyEnabled(true);
       } else {
