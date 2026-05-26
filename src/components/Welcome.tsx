@@ -238,14 +238,17 @@ export function Welcome() {
           {/* Тоггл «Прокси для входа в Telegram» — для юзеров где
               провайдер блокирует t.me / telegram.org. Включает sing-box
               TUN с split-routing: только Telegram-домены через trial-ноду,
-              остальное direct. */}
+              остальное direct. iOS-style switch (custom CSS), не дефолтный
+              Windows checkbox. */}
           <label className="ariy-tg-proxy-toggle">
             <input
               type="checkbox"
+              className="ariy-toggle-input"
               checked={tgProxyEnabled}
               disabled={tgProxyBusy}
               onChange={(e) => void onToggleTgProxy(e.target.checked)}
             />
+            <span className="ariy-toggle-slider" aria-hidden="true"></span>
             <span className="ariy-tg-proxy-toggle-label">
               {tgProxyBusy
                 ? t("welcome.login.tgProxyConnecting")
