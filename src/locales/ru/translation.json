@@ -69,6 +69,10 @@
       "tgReopen": "Снова открыть бота",
       "tgOpenInBrowser": "Открыть в браузере (если Telegram не установлен)",
       "tgCancel": "Отменить",
+      "tgProxyOff": "Включить прокси для входа в Telegram (если провайдер блокирует)",
+      "tgProxyOn": "Прокси для Telegram активен",
+      "tgProxyConnecting": "Подключаемся к серверу для входа…",
+      "tgProxyError": "Не удалось подключить прокси",
       "err": {
         "invalidCredentials": "неверный email или пароль",
         "rateLimited": "слишком частые попытки, подожди минуту",
