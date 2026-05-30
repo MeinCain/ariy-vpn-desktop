@@ -37,7 +37,7 @@ impl KillSwitchState {
 }
 
 use crate::config::mihomo_config::AppRule;
-use crate::config::sing_box_config::{AntiDpiOptions, MuxOptions};
+use crate::config::sing_box_config::{AntiDpiOptions, MuxOptions, TunOptions};
 use crate::config::subscription::{fetch_and_parse, SubscriptionMeta};
 use crate::config::{mihomo_config, sing_box_config, HwidState, ProxyEntry, SubscriptionState};
 use crate::platform;
@@ -1410,127 +1410,54 @@ pub async fn connect_trial_tun(
     fp: String,
 ) -> Result<(), String> {
     let mixed_port = find_free_port(18100);
-    // beta.53: переписан конфиг по образцу main VPN flow ([sing_box_config.rs](src-tauri/src/config/sing_box_config.rs)).
-    // Главные отличия от .41-.52 trial-конфига — теперь добавлены критичные
-    // для sing-box 1.13+ блоки которых раньше не было:
-    //
-    // 1. **`dns.servers + dns rules + final`** — без DNS-секции sing-box не
-    //    может корректно ресолвить hostname'ы в TUN-режиме (DNS-запросы юзера
-    //    попадают в TUN → outbound → нужен resolve → loop). DoH через 1.1.1.1
-    //    с detour: trial-out (DNS идёт через VPN, как в main).
-    //
-    // 2. **route rule `protocol: dns, action: hijack-dns`** — перехват DNS
-    //    запросов из TUN и обработка через dns-секцию выше.
-    //
-    // 3. **route rule `ip_cidr: [private ranges], outbound: direct`** —
-    //    КРИТИЧНО! Без этого 127.0.0.1, 192.168.x, 10.x, named-pipe loopback
-    //    Tauri↔helper всё идёт в TUN → ломается межпроцессное общение →
-    //    helper не отвечает Tauri → юзер видит обрыв.
-    //
-    // 4. **`default_domain_resolver: { server: "local" }`** в route — sing-box
-    //    1.12+ требует явный resolver для dial-операций на hostname (адрес
-    //    VPN-сервера ru-03). Иначе chicken-and-egg: VPN не поднят пока DNS
-    //    не работает, DNS не работает пока VPN не поднят.
-    //
-    // 5. **udp:443 reject** — блок QUIC, браузеры fallback на TCP TLS (где
-    //    работает Reality DPI-обход). В main VPN это есть, добавляю и сюда.
-    let config = serde_json::json!({
-        "log": { "level": "info", "timestamp": true },
-        "dns": {
-            "servers": [
-                {
-                    "type": "https",
-                    "tag": "doh",
-                    "server": "1.1.1.1",
-                    "server_port": 443,
-                    "path": "/dns-query",
-                    "domain_resolver": "local",
-                    "detour": "trial-out"
-                },
-                { "type": "local", "tag": "local" }
-            ],
-            "rules": [],
-            "final": "doh",
-            "strategy": "ipv4_only"
-        },
-        "inbounds": [
-            {
-                "type": "tun",
-                "tag": "tun-in",
-                "interface_name": "ariy-trial",
-                "address": ["172.18.0.1/30"],
-                "mtu": 1500,
-                "auto_route": true,
-                "strict_route": false,
-                "stack": "system"
-            },
-            {
-                "type": "mixed",
-                "tag": "trial-mixed-in",
-                "listen": "127.0.0.1",
-                "listen_port": mixed_port
-            }
-        ],
-        "outbounds": [
-            {
-                "type": "vless",
-                "tag": "trial-out",
-                "server": host,
-                "server_port": port,
-                "uuid": uuid,
-                "flow": flow,
-                "network": "tcp",
-                "packet_encoding": "xudp",
-                "tls": {
-                    "enabled": true,
-                    "server_name": sni,
-                    "utls": {
-                        "enabled": true,
-                        "fingerprint": fp,
-                    },
-                    "reality": {
-                        "enabled": true,
-                        "public_key": pbk,
-                        "short_id": sid,
-                    }
-                }
-            },
-            { "type": "direct", "tag": "direct" }
-        ],
-        "route": {
-            "rules": [
-                // sniff — извлекает SNI/Host для matching по доменам.
-                { "action": "sniff" },
-                // hijack-dns — перехват DNS на :53 → передача в dns-секцию.
-                { "protocol": "dns", "action": "hijack-dns" },
-                // Приватные подсети + loopback → direct. КРИТИЧНО:
-                // без этого named-pipe Tauri↔helper не работает.
-                {
-                    "ip_cidr": [
-                        "127.0.0.0/8",
-                        "10.0.0.0/8",
-                        "172.16.0.0/12",
-                        "192.168.0.0/16",
-                        "169.254.0.0/16",
-                        "::1/128",
-                        "fe80::/10",
-                        "fc00::/7"
-                    ],
-                    "action": "route",
-                    "outbound": "direct"
-                },
-                // VPN-сервер должен идти DIRECT (иначе loop через TUN).
-                { "domain": [host.clone()], "outbound": "direct" },
-                // QUIC block — браузеры fallback на TCP TLS (работает Reality).
-                { "network": "udp", "port": [443], "action": "reject" },
-            ],
-            "final": "trial-out",
-            "auto_detect_interface": true,
-            "default_domain_resolver": { "server": "local" }
-        }
-    });
 
-    let config_str = config.to_string();
+    // beta.55: используем ТОТ ЖЕ config-builder что main VPN
+    // ([sing_box_config::build](src-tauri/src/config/sing_box_config.rs)).
+    // Раньше тут был inline JSON-конфиг — он постоянно расходился с тем
+    // что генерирует main VPN: то DNS-секции не было, то loopback-direct
+    // правила, то default_domain_resolver. Теперь конструируем ProxyEntry
+    // из trial-credentials и зовём build() — получаем готовый правильный
+    // sing-box-конфиг с DNS, hijack-dns, private-IP-direct, QUIC-block,
+    // default_domain_resolver — всё что нужно для надёжного TUN-режима.
+    let trial_entry = ProxyEntry {
+        name: "Ariy Trial".to_string(),
+        protocol: "vless".to_string(),
+        server: host.clone(),
+        port,
+        raw: serde_json::json!({
+            "uuid": uuid,
+            "flow": flow,
+            "security": "reality",
+            "type": "tcp",
+            "sni": sni,
+            "fp": fp,
+            "pbk": pbk,
+            "sid": sid,
+        }),
+        engine_compat: vec!["sing-box".to_string()],
+    };
+
+    let tun_options = TunOptions {
+        interface_name: "ariy-trial".to_string(),
+        address: "198.18.0.1/15".to_string(),
+        mtu: 9000,
+    };
+
+    let sb_config = sing_box_config::build(
+        &trial_entry,
+        mixed_port,
+        mixed_port,
+        "127.0.0.1",
+        true,
+        Some(&tun_options),
+        None,
+        None,
+        None,
+    )
+    .map_err(|e| format!("ошибка построения sing-box config для trial: {e}"))?;
+
+    let config_str = serde_json::to_string(&sb_config.json)
+        .map_err(|e| format!("сериализация trial-config: {e}"))?;
 
     // Конфиг и data-dir в ProgramData — shared read+write для helper-SYSTEM
     // и Tauri-user (как и main VPN TUN flow).
