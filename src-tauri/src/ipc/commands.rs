@@ -1410,10 +1410,49 @@ pub async fn connect_trial_tun(
     fp: String,
 ) -> Result<(), String> {
     let mixed_port = find_free_port(18100);
+    // beta.53: переписан конфиг по образцу main VPN flow ([sing_box_config.rs](src-tauri/src/config/sing_box_config.rs)).
+    // Главные отличия от .41-.52 trial-конфига — теперь добавлены критичные
+    // для sing-box 1.13+ блоки которых раньше не было:
+    //
+    // 1. **`dns.servers + dns rules + final`** — без DNS-секции sing-box не
+    //    может корректно ресолвить hostname'ы в TUN-режиме (DNS-запросы юзера
+    //    попадают в TUN → outbound → нужен resolve → loop). DoH через 1.1.1.1
+    //    с detour: trial-out (DNS идёт через VPN, как в main).
+    //
+    // 2. **route rule `protocol: dns, action: hijack-dns`** — перехват DNS
+    //    запросов из TUN и обработка через dns-секцию выше.
+    //
+    // 3. **route rule `ip_cidr: [private ranges], outbound: direct`** —
+    //    КРИТИЧНО! Без этого 127.0.0.1, 192.168.x, 10.x, named-pipe loopback
+    //    Tauri↔helper всё идёт в TUN → ломается межпроцессное общение →
+    //    helper не отвечает Tauri → юзер видит обрыв.
+    //
+    // 4. **`default_domain_resolver: { server: "local" }`** в route — sing-box
+    //    1.12+ требует явный resolver для dial-операций на hostname (адрес
+    //    VPN-сервера ru-03). Иначе chicken-and-egg: VPN не поднят пока DNS
+    //    не работает, DNS не работает пока VPN не поднят.
+    //
+    // 5. **udp:443 reject** — блок QUIC, браузеры fallback на TCP TLS (где
+    //    работает Reality DPI-обход). В main VPN это есть, добавляю и сюда.
     let config = serde_json::json!({
-        // beta.50: warn → info + timestamp. При warn видны только UDP-reject'ы
-        // без контекста подключения. На info — VLESS handshake, Reality, etc.
         "log": { "level": "info", "timestamp": true },
+        "dns": {
+            "servers": [
+                {
+                    "type": "https",
+                    "tag": "doh",
+                    "server": "1.1.1.1",
+                    "server_port": 443,
+                    "path": "/dns-query",
+                    "domain_resolver": "local",
+                    "detour": "trial-out"
+                },
+                { "type": "local", "tag": "local" }
+            ],
+            "rules": [],
+            "final": "doh",
+            "strategy": "ipv4_only"
+        },
         "inbounds": [
             {
                 "type": "tun",
@@ -1440,13 +1479,6 @@ pub async fn connect_trial_tun(
                 "server_port": port,
                 "uuid": uuid,
                 "flow": flow,
-                // beta.52: возвращаю `"network": "tcp"`. В beta.50 я убрал это
-                // поле "чтобы пропустить UDP через xudp" — это была регрессия.
-                // VLESS+Reality+xtls-rprx-vision по дизайну работает только с
-                // TCP-стримами; xudp как пакетная инкапсуляция в vision flow
-                // ведёт себя нестабильно — на разных серверах sing-box ведёт
-                // короткие сессии и потом отваливается. Возвращаю TCP-only
-                // — это конфиг от .41 до .49 при котором всё работало.
                 "network": "tcp",
                 "packet_encoding": "xudp",
                 "tls": {
@@ -1465,19 +1497,36 @@ pub async fn connect_trial_tun(
             },
             { "type": "direct", "tag": "direct" }
         ],
-        // full-tunnel: всё через trial-out (как было в .41-.49 когда работало).
         "route": {
             "rules": [
-                // 1.13+ sniff as rule action.
+                // sniff — извлекает SNI/Host для matching по доменам.
                 { "action": "sniff" },
-                // Трафик к самой trial-ноде должен идти DIRECT (иначе loop).
+                // hijack-dns — перехват DNS на :53 → передача в dns-секцию.
+                { "protocol": "dns", "action": "hijack-dns" },
+                // Приватные подсети + loopback → direct. КРИТИЧНО:
+                // без этого named-pipe Tauri↔helper не работает.
+                {
+                    "ip_cidr": [
+                        "127.0.0.0/8",
+                        "10.0.0.0/8",
+                        "172.16.0.0/12",
+                        "192.168.0.0/16",
+                        "169.254.0.0/16",
+                        "::1/128",
+                        "fe80::/10",
+                        "fc00::/7"
+                    ],
+                    "action": "route",
+                    "outbound": "direct"
+                },
+                // VPN-сервер должен идти DIRECT (иначе loop через TUN).
                 { "domain": [host.clone()], "outbound": "direct" },
-                // beta.52: udp:443 reject rule убран — это была регрессия .50.
-                // Юзер подтвердил что full-tunnel работал до моих "улучшений";
-                // правил было только два (host→direct + sniff), и этого хватало.
+                // QUIC block — браузеры fallback на TCP TLS (работает Reality).
+                { "network": "udp", "port": [443], "action": "reject" },
             ],
             "final": "trial-out",
-            "auto_detect_interface": true
+            "auto_detect_interface": true,
+            "default_domain_resolver": { "server": "local" }
         }
     });
 
