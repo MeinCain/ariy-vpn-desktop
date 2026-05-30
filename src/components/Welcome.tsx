@@ -4,7 +4,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { invoke } from "@tauri-apps/api/core";
 import { useSubscriptionStore } from "../stores/subscriptionStore";
 import { useAuthStore } from "../stores/authStore";
-import { apiFetchAuthMe, apiFetchTrialVless } from "../lib/ariy-api";
+import { apiFetchAuthMe, apiFetchTrialProxy } from "../lib/ariy-api";
 import { DASHBOARD_URL } from "../lib/constants";
 
 /**
@@ -44,16 +44,16 @@ export function Welcome() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const lastSessionToken = useRef<string | null>(null);
-  // beta.35: тоггл «Прокси для входа в Telegram» — если у юзера провайдер
-  // блочит t.me / api.ariyvpn.com / Telegram-серверы, юзер ВКЛЮЧАЕТ
-  // тумблер → клиент поднимает sing-box TUN с split-routing (только
-  // Telegram + api.ariyvpn.com через нашу trial-ноду в Финляндии,
-  // остальной трафик идёт DIRECT). Никаких system-proxy, никаких PAC —
-  // network-layer туннель работает для любого browser и для TG-приложения.
-  // На login success тумблер автоматически выключается.
+  // Тоггл «Прокси для входа в Telegram». Поднимает sing-box TUN c
+  // full-tunnel через trial-ноду на 3 минуты — этого хватает чтобы
+  // залогиниться, и не оставляет юзера в проксированном состоянии
+  // навсегда. По истечении или при успешном логине — авто-выключение.
   const [tgProxyEnabled, setTgProxyEnabled] = useState(false);
   const [tgProxyBusy, setTgProxyBusy] = useState(false);
   const [tgProxyError, setTgProxyError] = useState<string | null>(null);
+  const [tgProxyExpiresAt, setTgProxyExpiresAt] = useState<number | null>(null);
+  const [, setTgProxyTick] = useState(0);
+  const TG_PROXY_DURATION_MS = 3 * 60 * 1000;
 
   // Login успешен — автоматом получаем sub_url через backend и
   // подставляем в subscriptionStore. Юзер сразу видит свою подписку,
@@ -92,20 +92,54 @@ export function Welcome() {
     }
   }, [sessionToken]);
 
-  // Auto-disconnect trial-TUN при успешном login. Юзер залогинился —
+  // Auto-disconnect trial-proxy при успешном login. Юзер залогинился —
   // дальше main VPN flow с подпиской, trial больше не нужен.
+  //
+  // beta.51: возврат с trial-TUN (beta.41+) на trial-proxy (HTTP+PAC).
+  // Trial-TUN ломался при наличии корпоративных VPN (Fortinet, Citrix —
+  // их default route'ы перебивали наш auto_route, sing-box работал, но
+  // трафик шёл мимо), требовал admin-прав на CreateAdapter (через helper),
+  // и в целом был более brittle. Trial-proxy запускается user-mode'ом без
+  // admin, ставит PAC AutoConfigURL только для Telegram-доменов — не
+  // конфликтует ни с чем.
   useEffect(() => {
     if (!sessionToken) return;
     if (!tgProxyEnabled) return;
     void (async () => {
       try {
-        await invoke("disconnect_trial_tun");
+        await invoke("disconnect_trial_proxy");
       } catch (e) {
-        console.warn("[Welcome] disconnect_trial_tun on login failed:", e);
+        console.warn("[Welcome] disconnect_trial_proxy on login failed:", e);
       }
       setTgProxyEnabled(false);
+      setTgProxyExpiresAt(null);
     })();
   }, [sessionToken, tgProxyEnabled]);
+
+  // Обратный отсчёт. Тикает раз в секунду пока есть expiresAt; по
+  // истечении — авто-disconnect. Хранение абсолютного времени (а не
+  // remaining) защищает от drift'а если таб встал на паузу.
+  useEffect(() => {
+    if (tgProxyExpiresAt === null) return;
+    const id = window.setInterval(() => {
+      const remaining = tgProxyExpiresAt - Date.now();
+      if (remaining <= 0) {
+        window.clearInterval(id);
+        void (async () => {
+          try {
+            await invoke("disconnect_trial_proxy");
+          } catch (e) {
+            console.warn("[Welcome] auto-disconnect failed:", e);
+          }
+          setTgProxyEnabled(false);
+          setTgProxyExpiresAt(null);
+        })();
+      } else {
+        setTgProxyTick((n) => n + 1);
+      }
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [tgProxyExpiresAt]);
 
   const onToggleTgProxy = async (next: boolean) => {
     if (tgProxyBusy) return;
@@ -113,33 +147,44 @@ export function Welcome() {
     setTgProxyError(null);
     try {
       if (next) {
-        const trial = await apiFetchTrialVless();
+        // beta.51: возврат на trial-proxy (HTTP+PAC). См. комментарий
+        // в useEffect-disconnect выше. Trial-TUN борется с корпоративными
+        // VPN; trial-proxy через PAC AutoConfigURL не конфликтует.
+        const trial = await apiFetchTrialProxy();
         if (!trial) throw new Error("сервер недоступен");
-        await invoke("connect_trial_tun", {
+        await invoke("connect_trial_proxy", {
           host: trial.host,
           port: trial.port,
-          uuid: trial.uuid,
-          flow: trial.flow,
-          sni: trial.sni,
-          pbk: trial.pbk,
-          sid: trial.sid,
-          fp: trial.fp,
+          user: trial.user,
+          pass: trial.pass,
         });
         setTgProxyEnabled(true);
+        setTgProxyExpiresAt(Date.now() + TG_PROXY_DURATION_MS);
       } else {
-        await invoke("disconnect_trial_tun");
+        await invoke("disconnect_trial_proxy");
         setTgProxyEnabled(false);
+        setTgProxyExpiresAt(null);
       }
     } catch (e) {
       console.error("[Welcome] toggle tg-proxy failed:", e);
       setTgProxyError(String((e as Error).message ?? e));
-      // Если включение упало — оставляем выключенным; если выключение упало —
-      // оставляем visual on, но юзер видит ошибку.
-      if (next) setTgProxyEnabled(false);
+      if (next) {
+        setTgProxyEnabled(false);
+        setTgProxyExpiresAt(null);
+      }
     } finally {
       setTgProxyBusy(false);
     }
   };
+
+  const tgProxyRemainingLabel = (() => {
+    if (tgProxyExpiresAt === null) return null;
+    const remaining = Math.max(0, tgProxyExpiresAt - Date.now());
+    const total = Math.ceil(remaining / 1000);
+    const mm = Math.floor(total / 60);
+    const ss = total % 60;
+    return `${mm}:${ss.toString().padStart(2, "0")}`;
+  })();
 
   // beta.35: trial-proxy управляется тумблером выше. `onClickTelegram` теперь
   // просто стартует TG-poll и открывает t.me/login через дефолтный browser.
@@ -239,11 +284,9 @@ export function Welcome() {
             <span>{t("welcome.login.tg")}</span>
           </button>
 
-          {/* Тоггл «Прокси для входа в Telegram» — для юзеров где
-              провайдер блокирует t.me / telegram.org. Включает sing-box
-              TUN с split-routing: только Telegram-домены через trial-ноду,
-              остальное direct. iOS-style switch (custom CSS), не дефолтный
-              Windows checkbox. */}
+          {/* Тоггл «Прокси для входа в Telegram». Поднимает full-tunnel
+              через trial-ноду на 3 минуты с обратным отсчётом. По истечении
+              или при успешном логине автоматом выключается. */}
           <label className="ariy-tg-proxy-toggle">
             <input
               type="checkbox"
@@ -257,7 +300,9 @@ export function Welcome() {
               {tgProxyBusy
                 ? t("welcome.login.tgProxyConnecting")
                 : tgProxyEnabled
-                  ? t("welcome.login.tgProxyOn")
+                  ? tgProxyRemainingLabel
+                    ? `${t("welcome.login.tgProxyOn")} · ${tgProxyRemainingLabel}`
+                    : t("welcome.login.tgProxyOn")
                   : t("welcome.login.tgProxyOff")}
             </span>
           </label>
