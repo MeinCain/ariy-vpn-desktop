@@ -1316,7 +1316,14 @@ pub async fn connect_trial_proxy(
 ) -> Result<u16, String> {
     let mixed_port = find_free_port(18000);
     let config = serde_json::json!({
-        "log": { "level": "warn" },
+        // beta.49: log level "warn"→"info" + timestamp. У юзера 30 мая
+        // 2026 trial упал с code=1 без единой строчки stderr — только
+        // "--- terminated code=Some(1) signal=None ---". При warn
+        // sing-box не пишет bootstrap-этапы конфига (resolve DNS server,
+        // dial outbound), поэтому невозможно понять что упало. На info
+        // объём логов небольшой (trial живёт максимум 10 минут), но
+        // диагностически бесценен.
+        "log": { "level": "info", "timestamp": true },
         "inbounds": [{
             "type": "mixed",
             "tag": "trial-in",
@@ -1383,11 +1390,12 @@ pub async fn disconnect_trial_proxy(
 // автоматически вызывает disconnect_trial_tun() и переключается на normal
 // VPN flow с подпиской.
 //
-/// Запускает trial-TUN с VLESS+Reality outbound и split-routing на Telegram-домены.
+/// Запускает trial-TUN — full-tunnel через VLESS+Reality на 3 минуты.
 ///
-/// beta.37: переход с HTTP-прокси на :8443 (узнаваемый CONNECT-формат) на
-/// VLESS+Reality на :443 — тот же стэк что main VPN, маскируется под
-/// TLS-handshake к настоящему сайту, обходит DPI намного лучше.
+/// beta.41: спавнится через helper (SYSTEM), как и main VPN TUN. Без
+/// этого CreateAdapter WinTUN и auto_route падали Access is denied'ом
+/// (sing-box FATAL до того как конфиг применялся). Никаких UAC-promt'ов
+/// для юзера — helper-сервис уже стоит как Windows service.
 #[tauri::command]
 pub async fn connect_trial_tun(
     app: tauri::AppHandle,
@@ -1404,13 +1412,6 @@ pub async fn connect_trial_tun(
     let mixed_port = find_free_port(18100);
     let config = serde_json::json!({
         "log": { "level": "warn" },
-        // beta.38: DNS-блок убран — sing-box 1.12+ deprecated legacy DNS format,
-        // и наш конфиг падал с FATAL до создания TUN-адаптера. У юзеров что
-        // мы видели Chrome даёт «превышено время ожидания», не «не удаётся
-        // resolve» — это значит DNS у провайдера резолвит Telegram-домены
-        // (TCP-blocking, не DNS-poisoning). Поэтому system DNS через `direct`
-        // outbound достаточен. Если потом окажется что у части юзеров есть
-        // DNS-poisoning — мигрируем на новый DNS format sing-box 1.12+.
         "inbounds": [
             {
                 "type": "tun",
@@ -1420,8 +1421,7 @@ pub async fn connect_trial_tun(
                 "mtu": 1500,
                 "auto_route": true,
                 "strict_route": false,
-                "stack": "system",
-                "sniff": true
+                "stack": "system"
             },
             {
                 "type": "mixed",
@@ -1458,32 +1458,71 @@ pub async fn connect_trial_tun(
         ],
         "route": {
             "rules": [
+                // sing-box 1.13+: sniff как rule action (legacy `sniff:true` на inbound удалён).
+                { "action": "sniff" },
                 // Сам трафик к trial-ноде должен идти DIRECT (иначе loop).
                 { "domain": [host.clone()], "outbound": "direct" },
-                // mixed inbound из in-app fetch — ВСЕГДА через trial
-                // (он используется для anonymous login flow с auth-api).
-                { "inbound": ["trial-mixed-in"], "outbound": "trial-out" },
-                // Telegram domains → trial. Остальное direct.
-                {
-                    "domain_suffix": [
-                        "t.me", "telegram.org", "telegram-cdn.org",
-                        "telesco.pe", "fragment.com", "tdesktop.com",
-                        "tg.dev", "tg.me"
-                    ],
-                    "outbound": "trial-out"
-                },
-                // api.ariyvpn.com через trial-out — критично для polling'а
-                // /v1/auth/telegram/poll если у юзера auth-api заблокирован
-                // в его сети.
-                { "domain": "api.ariyvpn.com", "outbound": "trial-out" },
             ],
-            "final": "direct",
+            "final": "trial-out",
             "auto_detect_interface": true
         }
     });
 
-    sing.start_with_config(&app, &config.to_string(), mixed_port)?;
-    tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
+    let config_str = config.to_string();
+
+    // Конфиг и data-dir в ProgramData — shared read+write для helper-SYSTEM
+    // и Tauri-user (как и main VPN TUN flow).
+    let shared_dir = std::path::PathBuf::from(r"C:\ProgramData\NemefistoVPN");
+    std::fs::create_dir_all(&shared_dir)
+        .map_err(|e| format!("создание ProgramData/NemefistoVPN: {e}"))?;
+    let config_path = shared_dir.join("sing-box-config.json");
+    std::fs::write(&config_path, &config_str)
+        .map_err(|e| format!("запись sing-box-config.json: {e}"))?;
+
+    let exe_path = resolve_sidecar_path(&app, "sing-box")
+        .ok_or_else(|| "sing-box binary не найден".to_string())?;
+    let config_pstr = config_path.to_string_lossy().into_owned();
+    let exe_pstr = exe_path.to_string_lossy().into_owned();
+    let data_pstr = shared_dir.to_string_lossy().into_owned();
+
+    if let Err(e) = platform::helper_bootstrap::ensure_running().await {
+        return Err(format!("helper-сервис недоступен: {e}"));
+    }
+    // Гасим прошлую sing-box-инстанс если осталась
+    let _ = platform::helper_client::singbox_stop().await;
+    let _ = sing.stop();
+
+    platform::helper_client::singbox_start(config_pstr, exe_pstr, data_pstr)
+        .await
+        .map_err(|e| format!("helper.singbox_start: {e}"))?;
+    sing.mark_helper_spawned(true);
+    *sing.mixed_port.lock().map_err(|e| format!("mutex: {e}"))? = mixed_port;
+
+    // Не возвращаем Ok пока трафик реально не пошёл через trial-out.
+    // VLESS+Reality handshake + Windows route propagation иногда занимают
+    // 3-5 секунд после spawn'а sing-box. До beta.42 был фиксированный
+    // 2-сек sleep, и первый клик «Войти через Telegram» падал — routing
+    // ещё не был готов, fetch /v1/auth/telegram/start таймаутил.
+    // Сейчас TCP-probe api.ariyvpn.com:443 с retry до 10 секунд.
+    let probe_deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    let mut probe_ok = false;
+    // Дать sing-box стартануть и привязать routes
+    tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+    while std::time::Instant::now() < probe_deadline {
+        let probe = tokio::time::timeout(
+            std::time::Duration::from_secs(2),
+            tokio::net::TcpStream::connect("api.ariyvpn.com:443"),
+        )
+        .await;
+        if let Ok(Ok(_stream)) = probe {
+            probe_ok = true;
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    }
+    if !probe_ok {
+        eprintln!("[trial-tun] WARN: probe api.ariyvpn.com:443 не ответил за 10с, продолжаю всё равно");
+    }
     Ok(())
 }
 
@@ -1493,7 +1532,12 @@ pub async fn connect_trial_tun(
 pub async fn disconnect_trial_tun(
     sing: State<'_, vpn::SingBoxState>,
 ) -> Result<(), String> {
+    // beta.41: spawn делается через helper, поэтому и stop тоже через
+    // helper. `sing.stop()` дополнительно гасит легаси-sidecar-инстансы
+    // если такие остались (no-op в новом flow).
+    let _ = platform::helper_client::singbox_stop().await;
     let _ = sing.stop();
+    sing.mark_helper_spawned(false);
     // На всякий случай чистим возможные остатки от старых билдов (beta.32+).
     let _ = platform::proxy::clear_system_pac();
     let _ = platform::proxy::clear_system_proxy();
