@@ -1411,7 +1411,9 @@ pub async fn connect_trial_tun(
 ) -> Result<(), String> {
     let mixed_port = find_free_port(18100);
     let config = serde_json::json!({
-        "log": { "level": "warn" },
+        // beta.50: warn → info + timestamp. При warn видны только UDP-reject'ы
+        // без контекста подключения. На info — VLESS handshake, Reality, etc.
+        "log": { "level": "info", "timestamp": true },
         "inbounds": [
             {
                 "type": "tun",
@@ -1438,7 +1440,19 @@ pub async fn connect_trial_tun(
                 "server_port": port,
                 "uuid": uuid,
                 "flow": flow,
-                "network": "tcp",
+                // beta.50: убрано `"network": "tcp"`. Раньше с этим полем sing-box
+                // router строго фильтровал outbound — все UDP-пакеты (DNS на 53,
+                // QUIC на 443) попадавшие в TUN роутились в trial-out, который
+                // их отказывался обрабатывать с ERROR "UDP is not supported by
+                // outbound: trial-out". Из-за этого DNS-резолверы у юзера не
+                // отвечали → ничего не открывалось → визуально "прокси
+                // включается и сразу вырубается".
+                //
+                // Дефолт sing-box VLESS = tcp+udp. С `packet_encoding: "xudp"`
+                // UDP-пакеты инкапсулируются в XUDP-расширение VLESS и идут
+                // по тому же TCP+TLS+Reality каналу. На сервере распаковываются
+                // и доставляются как UDP. Этот же паттерн использует main
+                // VPN-flow ([sing_box_config.rs:563-573](src-tauri/src/config/sing_box_config.rs)).
                 "packet_encoding": "xudp",
                 "tls": {
                     "enabled": true,
@@ -1462,6 +1476,14 @@ pub async fn connect_trial_tun(
                 { "action": "sniff" },
                 // Сам трафик к trial-ноде должен идти DIRECT (иначе loop).
                 { "domain": [host.clone()], "outbound": "direct" },
+                // beta.50: блочим UDP 443 (QUIC) — браузеры (Chrome, Firefox)
+                // массово используют HTTP/3 для google/youtube и т.п. QUIC через
+                // xudp+vision работает не на всех серверах reliably, а DPI-обход
+                // Reality сделан под TLS handshake, не под QUIC. Reject здесь
+                // заставит браузер fallback'нуть на TCP TLS — там DPI-обход
+                // отрабатывает штатно. Точно такой же rule в main VPN-flow
+                // ([sing_box_config.rs:373-378](src-tauri/src/config/sing_box_config.rs)).
+                { "network": "udp", "port": [443], "action": "reject" },
             ],
             "final": "trial-out",
             "auto_detect_interface": true
