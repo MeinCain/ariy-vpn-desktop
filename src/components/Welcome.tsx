@@ -92,17 +92,19 @@ export function Welcome() {
     }
   }, [sessionToken]);
 
-  // Auto-disconnect trial-TUN при успешном логине ЛЮБЫМ способом:
-  //  - TG deep-link / Email login → `sessionToken` non-null (authStore)
-  //  - Sub-URL paste → `subUrl` non-empty (subscriptionStore)
+  // Auto-disconnect trial-proxy при успешном login. Юзер залогинился —
+  // дальше main VPN flow с подпиской, trial больше не нужен.
   //
-  // beta.56: раньше зависимость была только `[sessionToken, tgProxyEnabled]` —
-  // при логине через sub-URL trial-TUN продолжал работать до истечения 3 мин
-  // или ручного toggle off. Теперь учитываем оба источника "юзер залогинен".
+  // beta.51: возврат с trial-TUN (beta.41+) на trial-proxy (HTTP+PAC).
+  // Trial-TUN ломался при наличии корпоративных VPN (Fortinet, Citrix —
+  // их default route'ы перебивали наш auto_route, sing-box работал, но
+  // трафик шёл мимо), требовал admin-прав на CreateAdapter (через helper),
+  // и в целом был более brittle. Trial-proxy запускается user-mode'ом без
+  // admin, ставит PAC AutoConfigURL только для Telegram-доменов — не
+  // конфликтует ни с чем.
   useEffect(() => {
+    if (!sessionToken) return;
     if (!tgProxyEnabled) return;
-    const isAuthed = Boolean(sessionToken) || Boolean(subUrl);
-    if (!isAuthed) return;
     void (async () => {
       try {
         await invoke("disconnect_trial_tun");
@@ -112,7 +114,7 @@ export function Welcome() {
       setTgProxyEnabled(false);
       setTgProxyExpiresAt(null);
     })();
-  }, [sessionToken, subUrl, tgProxyEnabled]);
+  }, [sessionToken, tgProxyEnabled]);
 
   // Обратный отсчёт. Тикает раз в секунду пока есть expiresAt; по
   // истечении — авто-disconnect. Хранение абсолютного времени (а не
