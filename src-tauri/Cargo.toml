@@ -1,6 +1,6 @@
 [package]
 name = "vpn-client"
-version = "0.2.0-beta.38"
+version = "0.2.0-beta.49"
 description = "Ariy VPN desktop client"
 authors = ["Ariy VPN"]
 edition = "2021"
@@ -72,10 +72,17 @@ winreg = "0.52"
 windows-service = "0.7"
 # Защищённое хранилище для секретов (URL подписки, HWID-override).
 # Использует Windows Credential Manager через keyring-rs (этап 6.A).
-keyring = "3"
+# В keyring 3.x platform backends — opt-in через features. Без windows-native
+# Entry::new создаёт mock-в-памяти, всё теряется при рестарте app.
+keyring = { version = "3", features = ["windows-native"] }
 windows-sys = { version = "0.59", features = [
     "Win32_Foundation",
     "Win32_Security",
+    # beta.48: CryptProtectData/CryptUnprotectData для DPAPI-зашифрованного
+    # auth-backup.dat. Дублирует Credential Manager. Если CM пуст (нашли
+    # такой случай 30 мая 2026 — юзер потерял подписку после нескольких
+    # update'ов), читаем backup-файл и восстанавливаем.
+    "Win32_Security_Cryptography",
     "Win32_NetworkManagement_IpHelper",
     "Win32_NetworkManagement_Ndis",
     # 13.D: WFP API (FwpmEngineOpen0, FwpmFilterAdd0, FWPM_LAYER_*).
