@@ -21,6 +21,8 @@ use std::process::Stdio;
 use tokio::process::{Child, Command};
 use tokio::sync::Mutex;
 
+use super::routing;
+
 #[allow(dead_code)]
 struct State {
     child: Child,
@@ -55,6 +57,25 @@ pub async fn start(
         bail!("конфиг не найден: {config_path}");
     }
     std::fs::create_dir_all(data_dir).context("создание data-dir")?;
+
+    // beta.49: pre-cleanup orphan wintun-адаптера ariy-* ДО спавна.
+    // Симптом без cleanup'а: connect → disconnect → connect внутри одной
+    // сессии vpn-client'а (PID не меняется → interface_name `ariy-<pid>`
+    // тот же) → sing-box падает FATAL "Cannot create a file when that
+    // file already exists", потому что stop() убивает процесс через
+    // TerminateProcess и Go-runtime не успевает выполнить defer-cleanup
+    // wintun. Сам helper рестартует только на boot, поэтому
+    // cleanup_orphan_resources() помогает только до первого connect.
+    //
+    // Делаем belt-and-suspenders: в stop() тоже cleanup'им после kill,
+    // но и здесь страхуем — на случай если предыдущий stop'а вообще
+    // не было (crash vpn-client'а с brutal-kill helper'а).
+    //
+    // Cost: PowerShell cold-start ~2-3с. Заметно на первом connect, но
+    // лучше предсказуемая пауза чем 50% failure rate на reconnect.
+    if let Err(e) = routing::cleanup_orphan_tun("ariy-*").await {
+        eprintln!("[helper-singbox] pre-start cleanup_orphan_tun → {e} (продолжаем)");
+    }
 
     // Лог в ProgramData — туда у SYSTEM есть write-access, и admin-user
     // может прочитать без UAC. Перезаписываем при каждом start (старые
@@ -97,12 +118,22 @@ pub async fn start(
 
 /// Остановить sing-box. Идемпотентно: если не запущен — Ok.
 ///
-/// sing-box при graceful kill (SIGTERM аналог на Windows — но у нас
-/// `child.kill()` использует TerminateProcess) всё равно успевает
-/// убрать свой WinTUN-адаптер благодаря `auto_route` cleanup-логике
-/// внутри Go-runtime. Если kill жёсткий — driver сам отвалится через
-/// несколько секунд + наш `cleanup_orphan_resources` подберёт остатки
-/// на следующем старте helper'а.
+/// `child.kill()` в tokio на Windows вызывает `TerminateProcess` —
+/// жёсткий kill уровня kill -9. Sing-box физически не успевает
+/// выполнить `defer wintunCloseAdapter()` из Go-runtime, поэтому
+/// wintun-адаптер `ariy-<pid>` остаётся orphan'ом в системе.
+///
+/// Раньше комментарий тут утверждал что graceful cleanup происходит сам —
+/// **это было неверно**. Симптом: следующий connect внутри той же сессии
+/// vpn-client'а (PID не меняется) падал с FATAL "Cannot create a file
+/// when that file already exists" и юзер видел "VPN включён" в UI, но
+/// трафик шёл напрямую, минуя несуществующий TUN. Помогала только смена
+/// ноды (full restart с другой задержкой даёт wintun-driver шанс отпустить
+/// адаптер сам через несколько секунд).
+///
+/// beta.49: ВСЕГДА вызываем `cleanup_orphan_tun` после kill+wait. Это
+/// PowerShell Remove-NetAdapter, ~2-3с — приемлемо, потому что
+/// disconnect и так UX-blocking операция.
 pub async fn stop() -> Result<()> {
     let mut g = STATE.lock().await;
     let state = match g.take() {
@@ -132,6 +163,19 @@ pub async fn stop() -> Result<()> {
         Err(_) => {
             return Err(anyhow!("sing-box не остановился за 3 секунды"));
         }
+    }
+
+    // beta.49: post-kill cleanup orphan wintun-адаптера. После
+    // TerminateProcess sing-box не успел убрать свой `ariy-<pid>`
+    // адаптер — делаем это сами. Без этого следующий connect в той же
+    // сессии vpn-client'а валится с FATAL "Cannot create a file when
+    // that file already exists" (см. диагностику юзера от 30 мая 2026,
+    // logs/NemefistoVPN/sing-box.log).
+    //
+    // Wildcard `ariy-*` — мы только что убили единственного sing-box
+    // helper'а (STATE mutex держит), параллельных wintun быть не должно.
+    if let Err(e) = routing::cleanup_orphan_tun("ariy-*").await {
+        eprintln!("[helper-singbox] post-kill cleanup_orphan_tun → {e} (продолжаем)");
     }
     Ok(())
 }
