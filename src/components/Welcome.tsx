@@ -4,7 +4,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { invoke } from "@tauri-apps/api/core";
 import { useSubscriptionStore } from "../stores/subscriptionStore";
 import { useAuthStore } from "../stores/authStore";
-import { apiFetchAuthMe, apiFetchTrialProxy } from "../lib/ariy-api";
+import { apiFetchAuthMe, apiFetchTrialVless } from "../lib/ariy-api";
 import { DASHBOARD_URL } from "../lib/constants";
 
 /**
@@ -107,9 +107,9 @@ export function Welcome() {
     if (!tgProxyEnabled) return;
     void (async () => {
       try {
-        await invoke("disconnect_trial_proxy");
+        await invoke("disconnect_trial_tun");
       } catch (e) {
-        console.warn("[Welcome] disconnect_trial_proxy on login failed:", e);
+        console.warn("[Welcome] disconnect_trial_tun on login failed:", e);
       }
       setTgProxyEnabled(false);
       setTgProxyExpiresAt(null);
@@ -127,7 +127,7 @@ export function Welcome() {
         window.clearInterval(id);
         void (async () => {
           try {
-            await invoke("disconnect_trial_proxy");
+            await invoke("disconnect_trial_tun");
           } catch (e) {
             console.warn("[Welcome] auto-disconnect failed:", e);
           }
@@ -147,21 +147,22 @@ export function Welcome() {
     setTgProxyError(null);
     try {
       if (next) {
-        // beta.51: возврат на trial-proxy (HTTP+PAC). См. комментарий
-        // в useEffect-disconnect выше. Trial-TUN борется с корпоративными
-        // VPN; trial-proxy через PAC AutoConfigURL не конфликтует.
-        const trial = await apiFetchTrialProxy();
+        const trial = await apiFetchTrialVless();
         if (!trial) throw new Error("сервер недоступен");
-        await invoke("connect_trial_proxy", {
+        await invoke("connect_trial_tun", {
           host: trial.host,
           port: trial.port,
-          user: trial.user,
-          pass: trial.pass,
+          uuid: trial.uuid,
+          flow: trial.flow,
+          sni: trial.sni,
+          pbk: trial.pbk,
+          sid: trial.sid,
+          fp: trial.fp,
         });
         setTgProxyEnabled(true);
         setTgProxyExpiresAt(Date.now() + TG_PROXY_DURATION_MS);
       } else {
-        await invoke("disconnect_trial_proxy");
+        await invoke("disconnect_trial_tun");
         setTgProxyEnabled(false);
         setTgProxyExpiresAt(null);
       }
