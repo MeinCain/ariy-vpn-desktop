@@ -1440,19 +1440,14 @@ pub async fn connect_trial_tun(
                 "server_port": port,
                 "uuid": uuid,
                 "flow": flow,
-                // beta.50: убрано `"network": "tcp"`. Раньше с этим полем sing-box
-                // router строго фильтровал outbound — все UDP-пакеты (DNS на 53,
-                // QUIC на 443) попадавшие в TUN роутились в trial-out, который
-                // их отказывался обрабатывать с ERROR "UDP is not supported by
-                // outbound: trial-out". Из-за этого DNS-резолверы у юзера не
-                // отвечали → ничего не открывалось → визуально "прокси
-                // включается и сразу вырубается".
-                //
-                // Дефолт sing-box VLESS = tcp+udp. С `packet_encoding: "xudp"`
-                // UDP-пакеты инкапсулируются в XUDP-расширение VLESS и идут
-                // по тому же TCP+TLS+Reality каналу. На сервере распаковываются
-                // и доставляются как UDP. Этот же паттерн использует main
-                // VPN-flow ([sing_box_config.rs:563-573](src-tauri/src/config/sing_box_config.rs)).
+                // beta.52: возвращаю `"network": "tcp"`. В beta.50 я убрал это
+                // поле "чтобы пропустить UDP через xudp" — это была регрессия.
+                // VLESS+Reality+xtls-rprx-vision по дизайну работает только с
+                // TCP-стримами; xudp как пакетная инкапсуляция в vision flow
+                // ведёт себя нестабильно — на разных серверах sing-box ведёт
+                // короткие сессии и потом отваливается. Возвращаю TCP-only
+                // — это конфиг от .41 до .49 при котором всё работало.
+                "network": "tcp",
                 "packet_encoding": "xudp",
                 "tls": {
                     "enabled": true,
@@ -1470,20 +1465,16 @@ pub async fn connect_trial_tun(
             },
             { "type": "direct", "tag": "direct" }
         ],
+        // full-tunnel: всё через trial-out (как было в .41-.49 когда работало).
         "route": {
             "rules": [
-                // sing-box 1.13+: sniff как rule action (legacy `sniff:true` на inbound удалён).
+                // 1.13+ sniff as rule action.
                 { "action": "sniff" },
-                // Сам трафик к trial-ноде должен идти DIRECT (иначе loop).
+                // Трафик к самой trial-ноде должен идти DIRECT (иначе loop).
                 { "domain": [host.clone()], "outbound": "direct" },
-                // beta.50: блочим UDP 443 (QUIC) — браузеры (Chrome, Firefox)
-                // массово используют HTTP/3 для google/youtube и т.п. QUIC через
-                // xudp+vision работает не на всех серверах reliably, а DPI-обход
-                // Reality сделан под TLS handshake, не под QUIC. Reject здесь
-                // заставит браузер fallback'нуть на TCP TLS — там DPI-обход
-                // отрабатывает штатно. Точно такой же rule в main VPN-flow
-                // ([sing_box_config.rs:373-378](src-tauri/src/config/sing_box_config.rs)).
-                { "network": "udp", "port": [443], "action": "reject" },
+                // beta.52: udp:443 reject rule убран — это была регрессия .50.
+                // Юзер подтвердил что full-tunnel работал до моих "улучшений";
+                // правил было только два (host→direct + sniff), и этого хватало.
             ],
             "final": "trial-out",
             "auto_detect_interface": true
@@ -1520,31 +1511,15 @@ pub async fn connect_trial_tun(
     sing.mark_helper_spawned(true);
     *sing.mixed_port.lock().map_err(|e| format!("mutex: {e}"))? = mixed_port;
 
-    // Не возвращаем Ok пока трафик реально не пошёл через trial-out.
-    // VLESS+Reality handshake + Windows route propagation иногда занимают
-    // 3-5 секунд после spawn'а sing-box. До beta.42 был фиксированный
-    // 2-сек sleep, и первый клик «Войти через Telegram» падал — routing
-    // ещё не был готов, fetch /v1/auth/telegram/start таймаутил.
-    // Сейчас TCP-probe api.ariyvpn.com:443 с retry до 10 секунд.
-    let probe_deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
-    let mut probe_ok = false;
-    // Дать sing-box стартануть и привязать routes
-    tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
-    while std::time::Instant::now() < probe_deadline {
-        let probe = tokio::time::timeout(
-            std::time::Duration::from_secs(2),
-            tokio::net::TcpStream::connect("api.ariyvpn.com:443"),
-        )
-        .await;
-        if let Ok(Ok(_stream)) = probe {
-            probe_ok = true;
-            break;
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-    }
-    if !probe_ok {
-        eprintln!("[trial-tun] WARN: probe api.ariyvpn.com:443 не ответил за 10с, продолжаю всё равно");
-    }
+    // beta.52: TCP-probe на api.ariyvpn.com:443 убран. При split-tunnel
+    // probe ничего не валидирует (он идёт через системный default-interface,
+    // не через TUN), а в худшем случае висит до 10с — фронтенд блокируется
+    // на await connect_trial_tun, юзер думает что что-то завис.
+    // Sing-box при `auto_route: true` поднимает routes за ~500мс, к моменту
+    // когда юзер успеет ткнуть «Войти через Telegram» (~1с UI animation),
+    // всё уже готово. Если будет нужно — фронтенд может сам сделать probe
+    // на /v1/auth/telegram/start через mixed-port'у proxy с error-retry.
+    tokio::time::sleep(std::time::Duration::from_millis(800)).await;
     Ok(())
 }
 
