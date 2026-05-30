@@ -165,18 +165,14 @@ pub async fn stop() -> Result<()> {
         }
     }
 
-    // beta.49: post-kill cleanup orphan wintun-адаптера. После
-    // TerminateProcess sing-box не успел убрать свой `ariy-<pid>`
-    // адаптер — делаем это сами. Без этого следующий connect в той же
-    // сессии vpn-client'а валится с FATAL "Cannot create a file when
-    // that file already exists" (см. диагностику юзера от 30 мая 2026,
-    // logs/NemefistoVPN/sing-box.log).
-    //
-    // Wildcard `ariy-*` — мы только что убили единственного sing-box
-    // helper'а (STATE mutex держит), параллельных wintun быть не должно.
-    if let Err(e) = routing::cleanup_orphan_tun("ariy-*").await {
-        eprintln!("[helper-singbox] post-kill cleanup_orphan_tun → {e} (продолжаем)");
-    }
+    // beta.52: убран post-kill cleanup_orphan_tun("ariy-*"). Wildcard
+    // `ariy-*` ловит И ariy-trial — если параллельно работает trial-TUN
+    // (запущен той же helper-инстанцией под другим STATE-mutex'ом? нет,
+    // у нас один STATE — но если когда-то будут два), wildcard убил бы
+    // его адаптер. Pre-cleanup в start() достаточен для YouTube
+    // reconnect-fix: на следующий connect мы заранее почистим orphan'ы
+    // перед спавном sing-box'а. Делать ещё и post-kill — overkill +
+    // потенциальный риск.
     Ok(())
 }
 
